@@ -1,0 +1,28 @@
+# Dependencias
+node_modules/
+
+# Build web generado
+www/
+
+# Android
+android/.gradle/
+android/.idea/
+android/app/build/
+android/app/release/
+android/build/
+android/local.properties
+
+# Android Studio / IntelliJ
+.idea/
+
+# Firmas y credenciales
+*.keystore
+*.jks
+keystore.properties
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# Capturas temporales de pruebas
+tests/screenshot-*.png

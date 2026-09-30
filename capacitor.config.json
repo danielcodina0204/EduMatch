@@ -1,0 +1,15 @@
+{
+  "appId": "com.edumatch.app",
+  "appName": "EduMatch",
+  "webDir": "www",
+  "backgroundColor": "#f1f5f9",
+  "android": {
+    "allowMixedContent": false
+  },
+  "plugins": {
+    "SystemBars": {
+      "insetsHandling": "css",
+      "initialViewportFitValueHint": "cover"
+    }
+  }
+}

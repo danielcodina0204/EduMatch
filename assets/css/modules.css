@@ -1,0 +1,1508 @@
+/* Navbar */
+.navbar {
+    background-color: var(--bg-nav);
+    border-bottom: 1px solid var(--border-color);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    backdrop-filter: blur(10px);
+    padding-top: var(--safe-top); /* la barra llega hasta arriba del todo, bajo la barra de estado */
+}
+
+.navbar-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 1rem max(1.5rem, var(--safe-right)) 1rem max(1.5rem, var(--safe-left));
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 800;
+    font-size: 1.3rem;
+    color: var(--primary);
+}
+
+.nav-links {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.nav-btn {
+    background: none;
+    border: none;
+    padding: 0.6rem 1rem;
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    cursor: pointer;
+}
+
+.nav-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    font-family: inherit;
+}
+
+/* Icono y texto abreviado: solo se usan en la barra inferior móvil */
+.nav-ico {
+    display: none;
+}
+
+.nav-btn:hover,
+.nav-btn.active {
+    color: var(--primary);
+    background-color: var(--primary-light);
+}
+
+.nav-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    min-width: 0;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.user-info #userNameDisplay {
+    min-width: 0;
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.user-info .badge,
+.user-info .btn-secondary {
+    flex: 0 0 auto;
+    white-space: nowrap;
+}
+
+.theme-toggle {
+    color: var(--text-main);
+    background: none;
+    border: 1px solid var(--border-color);
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 1.1rem;
+}
+
+/* Barra de estadísticas */
+.hero-stats-bar {
+    display: flex;
+    gap: 1.5rem;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
+    color: #ffffff;
+    padding: 1.25rem 1.5rem;
+    border-radius: var(--radius-lg);
+    margin-bottom: 2rem;
+    box-shadow: var(--shadow-md);
+}
+
+/* Modo oscuro: el degradado usa azules profundos; con el azul claro del acento el
+ * texto blanco casi no se leía (contraste ~2:1). */
+[data-theme="dark"] .hero-stats-bar {
+    background: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 100%);
+}
+
+.stat-item {
+    text-align: center;
+    flex: 1;
+}
+
+.stat-num {
+    display: block;
+    font-size: 1.6rem;
+    font-weight: 800;
+}
+
+.stat-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    opacity: 0.85;
+}
+
+/* Encabezado de sección */
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 1.5rem;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.section-desc {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+#searchSubject {
+    min-width: 260px;
+    padding: 0.65rem 1rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-color);
+    background-color: var(--bg-card);
+    color: var(--text-main);
+}
+
+/* Grid de tarjetas (materias / tutores) */
+.grid-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+    gap: 1.5rem;
+}
+
+.subject-card {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 1rem;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+@media (hover: hover) {
+    .subject-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-md);
+    }
+}
+
+.subject-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.subject-card h3 {
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+
+.subject-card p {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+/* ==========================================================================
+ * Tutores disponibles
+ * Una sola estructura para TODAS las tarjetas:
+ *   .tutor-card
+ *     .tutor-card__body     (flex:1)  nombre + etiqueta, correo, materias
+ *     .tutor-card__actions  (fondo)   botón "Solicitar con este tutor"
+ *     .tutor-card__manage   (solo la tarjeta propia) gestión de materias/perfil
+ * El botón queda anclado al fondo con el body en flex:1, así que su posición
+ * no depende de cuánto texto o cuántas materias tenga cada tutor.
+ * ========================================================================== */
+.tutor-card {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1.25rem;
+    min-width: 0;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+@media (hover: hover) {
+    .tutor-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-md);
+    }
+}
+
+.tutor-card__body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.tutor-card__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.tutor-card__name {
+    flex: 1 1 auto;
+    min-width: 0;
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 700;
+    line-height: 1.3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.tutor-card__badge {
+    flex: 0 0 auto;
+    padding: 0.2rem 0.6rem;
+    font-size: 0.68rem;
+}
+
+.tutor-card__email {
+    margin: 0;
+    font-size: 0.85rem;
+    line-height: 1.4;
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.tutor-card__tags {
+    display: flex;
+    flex-wrap: wrap;
+    align-content: flex-start;
+    gap: 0.4rem;
+    margin-top: 0.25rem;
+}
+
+.tutor-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    max-width: 100%;
+    padding: 0.2rem 0.55rem;
+    font-size: 0.68rem;
+}
+
+.tutor-tag__text {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.tutor-card__empty {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+.tag-remove {
+    background: none;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+    font-size: 0.9rem;
+    line-height: 1;
+    padding: 0;
+}
+
+/* Botones de la tarjeta: mismo alto, padding y tipografía en todas. */
+.tutor-card .btn-block {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.6rem;
+    margin: 0;
+    padding: 0.55rem 1rem;
+    font-size: 0.9rem;
+    line-height: 1.2;
+}
+
+/* Tarjeta del propio tutor: ancho completo, perfil a la izquierda y gestión
+ * a la derecha, para que no estire a las tarjetas de los demás tutores. */
+.tutor-card--own {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+    gap: 1.5rem 2rem;
+    align-items: start;
+}
+
+.tutor-card__manage {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    min-width: 0;
+    padding-left: 2rem;
+    border-left: 1px dashed var(--border-color);
+}
+
+.tutor-manage-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+.tutor-manage-group + .tutor-manage-group {
+    padding-top: 1rem;
+    border-top: 1px dashed var(--border-color);
+}
+
+.tutor-manage-label {
+    margin: 0;
+    font-size: 0.8rem;
+    line-height: 1.4;
+    color: var(--text-muted);
+}
+
+.tutor-card__manage select,
+.tutor-card__manage input,
+.tutor-card__manage textarea {
+    width: 100%;
+    padding: 0.55rem 0.75rem;
+    background-color: var(--bg-main);
+    color: var(--text-main);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    font-size: 0.85rem;
+    font-family: inherit;
+    outline: none;
+}
+
+.tutor-card__manage textarea {
+    resize: vertical;
+}
+
+.tutor-card__manage select:focus,
+.tutor-card__manage input:focus,
+.tutor-card__manage textarea:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+/* Modal de cuenta */
+.modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(4px);
+    z-index: 200;
+    justify-content: center;
+    align-items: center;
+    padding: max(1rem, var(--safe-top)) max(1rem, var(--safe-right)) max(1rem, var(--safe-bottom)) max(1rem, var(--safe-left));
+}
+
+.modal.active {
+    display: flex;
+}
+
+.modal-content {
+    width: 100%;
+    max-width: 480px;
+    max-height: 90vh;
+    max-height: min(90dvh, 100%);
+    overflow-y: auto;
+    overscroll-behavior: contain; /* el scroll del modal no arrastra la página de detrás */
+    position: relative;
+    animation: modalPop 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes modalPop {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+.close-btn {
+    position: absolute;
+    top: 0.6rem;
+    right: 0.7rem;
+    z-index: 2;
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    background: none;
+    border: none;
+    border-radius: 50%;
+    font-size: 1.6rem;
+    color: var(--text-muted);
+    cursor: pointer;
+    line-height: 1;
+}
+
+.close-btn:hover {
+    background-color: var(--primary-light);
+    color: var(--text-main);
+}
+
+#authModal .modal-content {
+    padding-top: 3rem; /* deja libre la X de cerrar sobre las pestañas */
+}
+
+.auth-tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    margin-bottom: 1.25rem;
+}
+
+.auth-tab {
+    padding: 0.7rem;
+    border: 1px solid var(--border-color);
+    background-color: var(--bg-main);
+    border-radius: var(--radius-sm);
+    color: var(--text-muted);
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.auth-tab.active {
+    border-color: var(--primary);
+    background-color: var(--primary-light);
+    color: var(--primary);
+}
+
+.role-selector {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    margin-bottom: 1.25rem;
+}
+
+.role-btn {
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    background-color: var(--bg-main);
+    border-radius: var(--radius-sm);
+    color: var(--text-muted);
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.role-btn.active {
+    border-color: var(--primary);
+    background-color: var(--primary-light);
+    color: var(--primary);
+}
+
+/* Modal de Configuración */
+.settings-modal-content h3 {
+    margin-bottom: 0.4rem;
+}
+
+.settings-modal-content > .section-desc {
+    margin-bottom: 1.25rem;
+}
+
+.settings-option {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+    padding: 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background-color: var(--bg-main);
+}
+
+.settings-option-title {
+    font-weight: 700;
+    margin-bottom: 0.3rem;
+}
+
+.settings-reset-confirm {
+    padding: 1rem;
+    border: 1px solid var(--danger);
+    border-radius: var(--radius-sm);
+    background-color: var(--danger-light);
+}
+
+.settings-reset-confirm .empty-title {
+    margin-bottom: 0.5rem;
+}
+
+.settings-reset-confirm .section-desc {
+    color: var(--text-main);
+    opacity: 0.85;
+    margin-bottom: 0.75rem;
+}
+
+#resetCountdownText {
+    font-weight: 700;
+    margin-bottom: 0.85rem;
+}
+
+.settings-reset-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+}
+
+.settings-reset-actions .btn-danger,
+.settings-reset-actions .btn-secondary {
+    flex: 1;
+    min-width: 160px;
+}
+
+.settings-reset-actions .btn-danger:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Historial de solicitudes */
+.requests-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+    gap: 1.25rem;
+}
+
+/* ---------- Tarjeta de solicitud ----------
+ * Filas FIJAS, iguales para todos los estados y roles:
+ *
+ *   1. .request-card-header  materia (1 línea) + estado
+ *   2. .request-details      Estudiante / Tutor / Tema / Fecha (1 línea c/u)
+ *   3. .request-info         aviso de estado (siempre presente, alto mínimo)
+ *   4. .request-meta         "Ver historial" + fecha de creación
+ *   5. .request-actions      botones, pegados al fondo
+ *
+ * Los textos largos se recortan con "…" (el texto completo queda en el
+ * atributo title) en vez de partirse en varias líneas: así ninguna tarjeta
+ * empuja hacia abajo las líneas de la de al lado. */
+.request-card {
+    border-left: 4px solid var(--primary);
+    display: grid;
+    /* minmax(0, 1fr): sin esto un título largo ensancha la columna y desborda la tarjeta */
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto 1fr auto auto;
+    row-gap: 0.75rem;
+    height: 100%;
+    min-width: 0;
+}
+
+.request-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 2rem;
+}
+
+.request-card-header h3 {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 1.1rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.request-card-header .badge {
+    flex: 0 0 auto;
+    white-space: nowrap;
+}
+
+.request-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    min-width: 0;
+}
+
+.request-line {
+    font-size: 0.9rem;
+    line-height: 1.3;
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.request-date {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+.request-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    min-width: 0;
+    min-height: 4.8rem;
+}
+
+/* Mensajes de estado / información adicional (rechazo, propuesta, etc.) */
+.request-notice {
+    flex: 1 1 auto;
+    display: flex;
+    align-items: center; /* el texto queda centrado en el recuadro, sin "aire" arriba/abajo */
+    margin: 0;
+    padding: 0.6rem 0.8rem;
+    font-size: 0.85rem;
+    line-height: 1.4;
+    color: var(--text-main);
+    background-color: var(--bg-main);
+    border-radius: var(--radius-sm);
+    overflow-wrap: anywhere;
+}
+
+/* Formularios / selectores dentro de la tarjeta */
+.request-panel {
+    padding-top: 0.75rem;
+    border-top: 1px dashed var(--border-color);
+}
+
+.request-panel .form-row,
+.request-panel .form-group {
+    margin-bottom: 0.75rem;
+}
+
+.request-panel .form-group:last-child {
+    margin-bottom: 0;
+}
+
+.request-panel textarea {
+    width: 100%;
+    padding: 0.6rem 0.8rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background-color: var(--bg-main);
+    color: var(--text-main);
+    font-size: 0.85rem;
+    resize: vertical;
+}
+
+/* Pie de la tarjeta: fila de fechas (Creada ... cierre) + "Ver historial".
+ * Siempre dos filas de una línea cada una, en el mismo orden, para que ese
+ * bloque mida igual en todas las tarjetas. */
+.request-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding-top: 0.6rem;
+    border-top: 1px dashed var(--border-color);
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.request-dates {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+.request-date-label {
+    font-weight: 600;
+}
+
+.link-btn {
+    align-self: flex-start;
+    background: none;
+    border: none;
+    padding: 0;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--primary);
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+/* ---------- Historial de una solicitud (ventana) ----------
+ * Compacto: cabecera mínima (materia, estado, la otra parte) + línea de tiempo
+ * de tres columnas [punto | qué pasó | fecha]. Las fechas van alineadas a la
+ * derecha en una columna de ancho fijo y los puntos sobre una misma línea. */
+.history-modal-content {
+    max-width: 420px;
+    padding: 1.25rem 1.4rem;
+}
+
+.history-header {
+    padding-right: 2.5rem; /* deja libre la X de cerrar (40 px) */
+    margin-bottom: 1rem;
+    padding-bottom: 0.85rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.history-eyebrow {
+    margin: 0 0 0.2rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+.history-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
+}
+
+.history-header-row h3 {
+    flex: 1 1 auto;
+    min-width: 0;
+    margin: 0;
+    font-size: 1.05rem;
+    overflow-wrap: anywhere;
+}
+
+.history-header-row .badge {
+    flex: 0 0 auto;
+    white-space: nowrap;
+}
+
+.history-meta {
+    margin: 0.3rem 0 0;
+    font-size: 0.82rem;
+    color: var(--text-muted);
+}
+
+.history-timeline {
+    --history-dot: var(--text-muted);
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    position: relative;
+}
+
+/* Conector: cada evento dibuja su tramo desde su punto hasta el punto del
+ * siguiente; el último no dibuja nada, así la línea termina en el último punto. */
+.history-item:not(:last-child)::before {
+    content: '';
+    position: absolute;
+    left: 4px;
+    top: calc(0.45rem + 0.3rem + 5px);
+    bottom: calc(-0.45rem - 0.3rem - 5px);
+    width: 2px;
+    background: var(--border-color);
+}
+
+.history-item {
+    position: relative;
+    display: grid;
+    grid-template-columns: 10px minmax(0, 1fr) 4.9rem;
+    column-gap: 0.75rem;
+    align-items: start;
+    padding: 0.45rem 0;
+}
+
+.history-dot {
+    width: 10px;
+    height: 10px;
+    margin-top: 0.3rem;
+    border-radius: 50%;
+    position: relative;
+    z-index: 1;
+    background: var(--history-dot);
+    box-shadow: 0 0 0 3px var(--bg-card); /* recorta la línea alrededor del punto */
+}
+
+.history-item--success { --history-dot: var(--accent); }
+.history-item--danger { --history-dot: var(--danger); }
+.history-item--info { --history-dot: var(--primary); }
+
+.history-body {
+    min-width: 0;
+}
+
+.history-title {
+    margin: 0;
+    font-size: 0.88rem;
+    font-weight: 600;
+    line-height: 1.35;
+}
+
+.history-detail {
+    margin: 0.1rem 0 0;
+    font-size: 0.78rem;
+    line-height: 1.35;
+    color: var(--text-muted);
+    overflow-wrap: anywhere;
+}
+
+.history-date {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    padding-top: 0.05rem;
+    font-size: 0.78rem;
+    line-height: 1.35;
+    text-align: right;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-main);
+}
+
+.history-date span {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+}
+
+/* Acciones: cuadrícula de 2 columnas. Con 1 botón ocupa todo el ancho; con 2
+ * van lado a lado; con 3 el último ocupa toda la fila; y así sucesivamente.
+ * TODOS los botones comparten alto, padding, borde y tamaño de letra, sin
+ * importar su variante (primary / secondary / danger). */
+.request-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+}
+
+.request-actions:empty {
+    display: none;
+}
+
+.request-actions > button {
+    grid-column: span 1;
+    box-sizing: border-box;
+    width: 100%;
+    height: 44px;
+    margin: 0;
+    padding: 0 0.4rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid var(--primary);
+    border-radius: var(--radius-sm);
+    font-size: 0.88rem;
+    font-weight: 600;
+    line-height: 1.15;
+    text-align: center;
+}
+
+.request-actions > .btn-danger {
+    border-color: var(--danger);
+}
+
+.request-actions > button:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+}
+
+/* El botón principal no debe "saltar" distinto que los demás al pasar el mouse */
+.request-actions > .btn-primary:hover {
+    transform: none;
+}
+
+/* Botones de los formularios dentro de la tarjeta: mismo alto que las acciones */
+.request-card .request-panel .btn-block {
+    box-sizing: border-box;
+    height: 44px;
+    margin: 0;
+    padding: 0 0.75rem;
+    border: 2px solid var(--primary);
+}
+
+/* Valoraciones */
+.rating-box {
+    width: 100%;
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px dashed var(--border-color);
+}
+
+.rating-label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 0.4rem;
+}
+
+.rating-stars {
+    display: flex;
+    gap: 0.25rem;
+    margin-bottom: 0.5rem;
+}
+
+.star-btn {
+    background: none;
+    border: none;
+    font-size: 1.4rem;
+    color: #d1d5db;
+    cursor: pointer;
+    padding: 0;
+}
+
+.star-btn:hover {
+    color: #f59e0b;
+}
+
+.rating-box textarea {
+    width: 100%;
+    padding: 0.6rem 0.8rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background-color: var(--bg-main);
+    color: var(--text-main);
+    font-size: 0.85rem;
+    resize: vertical;
+}
+
+.rating-display {
+    margin-top: 0.5rem;
+    color: #f59e0b;
+    font-size: 1rem;
+}
+
+/* Tarjetita con la propuesta de horario del tutor, dentro de la tarjeta de
+ * solicitud del estudiante. Los botones "Aceptar horario"/"Rechazar
+ * propuesta" NO van dentro de este bloque: son hijos directos de
+ * .request-actions para heredar el mismo layout (flex, gap, ancho) que el
+ * resto de botones de la tarjeta. */
+.schedule-proposal {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    width: 100%;
+    padding: 0.6rem 0.8rem;
+    margin: 0;
+    background-color: var(--primary-light);
+    border-radius: var(--radius-sm);
+}
+
+.schedule-proposal-text {
+    font-size: 0.85rem;
+    color: var(--text-main);
+}
+
+.schedule-proposal-datetime {
+    font-weight: 600;
+    color: var(--primary);
+}
+
+/* Modal de confirmación (rechazar solicitud / propuesta) */
+.confirm-modal-content {
+    max-width: 420px;
+}
+
+.confirm-modal-content h3 {
+    margin-bottom: 0.5rem;
+}
+
+.confirm-modal-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    margin-top: 1.25rem;
+}
+
+.confirm-modal-actions button {
+    box-sizing: border-box;
+    height: 44px;
+    padding: 0 1rem;
+}
+
+
+/* ==========================================================================
+ * RESPONSIVE — dos versiones con el mismo HTML
+ *
+ *   WEB  (> 768 px)  Enlaces arriba, dentro del navbar.
+ *   APP  (≤ 768 px)  Barra superior mínima + barra de pestañas INFERIOR
+ *                    (como una app nativa) — es lo que ve Capacitor/Android.
+ *
+ * Puntos de corte:
+ *   769–1100  tablet horizontal / portátil pequeño: pestañas en 2.ª fila
+ *   ≤ 768     tablet vertical y móvil: barra inferior, tarjetas a 1–2 columnas
+ *   ≤ 480     móvil: formularios y botones a ancho completo, modales tipo "sheet"
+ *   ≤ 360     móvil pequeño (320–360 px): tipografías y espacios más ajustados
+ *   móvil horizontal (alto ≤ 480): barra inferior compacta
+ * ========================================================================== */
+
+/* ---------- Tablet horizontal / portátil pequeño (769–1100 px) ---------- */
+@media (min-width: 769px) and (max-width: 1100px) {
+    .navbar-container {
+        row-gap: 0.4rem;
+    }
+
+    /* El logo y las acciones en la primera fila; las pestañas centradas debajo */
+    .nav-links {
+        order: 3;
+        width: 100%;
+        justify-content: center;
+    }
+
+    .navbar-container {
+        padding-top: 0.75rem;
+        padding-bottom: 0.5rem;
+    }
+}
+
+/* ---------- Tablet vertical y móvil: versión APP (≤ 768 px, o móvil en horizontal) ---------- */
+@media (max-width: 768px),
+       (max-width: 950px) and (max-height: 480px) and (orientation: landscape) {
+    .container {
+        margin: 1rem auto 0;
+        padding-left: max(1rem, var(--safe-left));
+        padding-right: max(1rem, var(--safe-right));
+        /* deja libre la barra inferior fija + la barra de gestos */
+        padding-bottom: calc(var(--bottom-nav-h) + var(--safe-bottom) + 1.5rem);
+    }
+
+    h2 {
+        font-size: 1.4rem;
+    }
+
+    /* --- Barra superior: logo | tema | ajustes | ingresar, y debajo el usuario --- */
+    .navbar {
+        /* backdrop-filter convertiría al navbar en el "contenedor" de la barra
+         * inferior fija y la dejaría pegada arriba: se desactiva en móvil. */
+        backdrop-filter: none;
+    }
+
+    .navbar-container {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto auto auto;
+        grid-template-areas:
+            "logo theme settings auth"
+            "user user user user";
+        align-items: center;
+        gap: 0 0.5rem;
+        padding: 0.55rem max(1rem, var(--safe-right)) 0.55rem max(1rem, var(--safe-left));
+    }
+
+    .logo {
+        grid-area: logo;
+        font-size: 1.2rem;
+        min-width: 0;
+    }
+
+    .nav-actions {
+        display: contents; /* sus hijos se colocan directamente en la cuadrícula del navbar */
+    }
+
+    #themeToggleBtn { grid-area: theme; }
+    #settingsToggleBtn { grid-area: settings; }
+    #authButton { grid-area: auth; }
+
+    .theme-toggle {
+        display: inline-grid;
+        place-items: center;
+        width: 44px;
+        height: 44px;
+        padding: 0;
+    }
+
+    #authButton {
+        min-height: 44px;
+        padding: 0 1rem;
+    }
+
+    .user-info {
+        grid-area: user;
+        justify-content: space-between;
+        gap: 0.5rem;
+        margin-top: 0.35rem;
+        padding-top: 0.45rem;
+        border-top: 1px solid var(--border-color);
+    }
+
+    .user-info #userNameDisplay {
+        flex: 1 1 auto;
+        max-width: none;
+    }
+
+    .user-info .btn-secondary {
+        min-height: 40px;
+        padding: 0 0.85rem;
+        font-size: 0.82rem;
+    }
+
+    /* --- Barra de pestañas inferior --- */
+    .nav-links {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 110;
+        display: grid;
+        /* una columna por pestaña visible: 4 (estudiante), 3 (tutor / sin sesión) */
+        grid-auto-flow: column;
+        grid-auto-columns: minmax(0, 1fr);
+        gap: 0.15rem;
+        width: auto;
+        padding: 0.35rem max(0.4rem, var(--safe-right)) calc(0.35rem + var(--safe-bottom)) max(0.4rem, var(--safe-left));
+        background-color: var(--bg-nav);
+        border-top: 1px solid var(--border-color);
+        box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.08);
+    }
+
+    .nav-btn {
+        flex-direction: column;
+        gap: 0.15rem;
+        min-width: 0;
+        min-height: calc(var(--bottom-nav-h) - 0.7rem);
+        padding: 0.3rem 0.15rem;
+        border-radius: 12px;
+        font-size: 0.7rem;
+        line-height: 1.15;
+        text-align: center;
+    }
+
+    .nav-ico {
+        display: block;
+        font-size: 1.3rem;
+        line-height: 1;
+    }
+
+    .nav-label-extra {
+        display: none; /* "Solicitar Tutoría" → "Solicitar", "Mis Solicitudes" → "Solicitudes" */
+    }
+
+    .nav-label {
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    /* --- Estadísticas: siempre 3 en una fila --- */
+    .hero-stats-bar {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0.5rem;
+        padding: 0.9rem 0.5rem;
+        margin-bottom: 1.25rem;
+    }
+
+    .stat-item {
+        flex: none;
+    }
+
+    .stat-num {
+        font-size: 1.4rem;
+        line-height: 1.2;
+    }
+
+    .stat-label {
+        font-size: 0.66rem;
+        letter-spacing: 0.02em;
+    }
+
+    /* --- Encabezado de sección: título arriba, buscador a todo el ancho --- */
+    .section-header {
+        align-items: stretch;
+    }
+
+    #searchSubject {
+        min-width: 0;
+        width: 100%;
+    }
+
+    /* --- Tarjetas: 2 columnas en tablet vertical (auto-fill), 1 en móvil --- */
+    .grid-cards,
+    .requests-list {
+        gap: 1rem;
+    }
+
+    .tutor-card--own {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .tutor-card__manage {
+        padding-left: 0;
+        padding-top: 1.25rem;
+        border-left: none;
+        border-top: 1px dashed var(--border-color);
+    }
+
+    .card {
+        padding: 1.25rem;
+    }
+
+    /* --- Zona táctil ≥ 44 px --- */
+    .btn-primary,
+    .btn-secondary,
+    .btn-danger,
+    .auth-tab,
+    .role-btn {
+        min-height: 44px;
+    }
+
+    .tutor-card .btn-block {
+        min-height: 44px;
+    }
+
+    .link-btn {
+        display: inline-flex;
+        align-items: center;
+        min-height: 40px;
+        margin: -0.6rem 0;    /* área táctil grande sin agrandar el pie de la tarjeta */
+        padding: 0.6rem 0.25rem 0.6rem 0;
+    }
+
+    .star-btn {
+        width: 44px;
+        height: 44px;
+        font-size: 1.7rem;
+        display: grid;
+        place-items: center;
+    }
+
+    .rating-stars {
+        gap: 0;
+        margin-left: -0.4rem;
+    }
+
+    .tag-remove {
+        min-width: 28px;
+        min-height: 28px;
+        margin: -0.4rem -0.3rem -0.4rem 0;
+        font-size: 1.1rem;
+    }
+
+    .subject-checkbox {
+        min-height: 36px;
+    }
+
+    .subject-checkbox input {
+        width: 20px;
+        height: 20px;
+    }
+
+    .password-toggle {
+        padding: 0.6rem;
+        right: 0.1rem;
+    }
+
+    /* 16 px en los campos: por debajo, WebView/Safari hacen zoom al enfocarlos */
+    .form-group input,
+    .form-group select,
+    .form-group textarea,
+    #authModal .form-group input,
+    #authModal .form-group select,
+    #authModal .form-group textarea,
+    #searchSubject,
+    .tutor-card__manage select,
+    .tutor-card__manage input,
+    .tutor-card__manage textarea,
+    .request-panel textarea,
+    .rating-box textarea {
+        font-size: 16px;
+    }
+
+    .form-group input:not([type="checkbox"]),
+    .form-group select,
+    #searchSubject,
+    .tutor-card__manage select,
+    .tutor-card__manage input,
+    #authModal .form-group input:not([type="checkbox"]),
+    #authModal .form-group select {
+        min-height: 44px;
+    }
+
+    /* --- Avisos (toast): pastilla compacta y centrada, justo sobre la barra inferior --- */
+    .toast-container {
+        left: max(0.75rem, var(--safe-left));
+        right: max(0.75rem, var(--safe-right));
+        bottom: calc(var(--bottom-nav-h) + var(--safe-bottom) + 0.4rem);
+        max-width: none;
+        align-items: center;
+    }
+
+    .toast {
+        max-width: min(100%, 340px);
+        padding: 0.45rem 0.75rem;
+        font-size: 0.8rem;
+    }
+
+    /* Teclado abierto (main.js pone `kb-open` en <html>): la barra inferior estorba,
+     * porque Android encoge el WebView y la subiría encima del teclado. */
+    html.kb-open .nav-links {
+        display: none;
+    }
+
+    html.kb-open .container {
+        padding-bottom: 1rem;
+    }
+
+    html.kb-open .toast-container {
+        bottom: 0.75rem;
+    }
+
+    /* Los modales dejan sitio a la barra de estado */
+    .modal-content {
+        max-height: min(90dvh, 100%);
+    }
+}
+
+/* ---------- Móvil (≤ 480 px) ---------- */
+@media (max-width: 480px) {
+    .request-actions {
+        grid-template-columns: 1fr;
+    }
+
+    .form-row {
+        grid-template-columns: 1fr;
+        gap: 0;
+    }
+
+    /* Modales como "hoja" que sube desde abajo, como en una app nativa */
+    .modal {
+        align-items: flex-end;
+        padding: max(0.5rem, var(--safe-top)) 0 0;
+    }
+
+    .modal-content {
+        max-width: none;
+        max-height: min(92dvh, 100%);
+        border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+        padding: 1.25rem 1.25rem calc(1.25rem + var(--safe-bottom));
+        animation: sheetUp 0.28s ease-out;
+    }
+
+    #authModal .modal-content {
+        padding: 3rem 1.25rem calc(1.1rem + var(--safe-bottom));
+    }
+
+    .history-modal-content {
+        max-width: none;
+    }
+
+    .confirm-modal-content {
+        max-width: none;
+    }
+
+    .confirm-modal-actions button {
+        height: 48px;
+    }
+
+    .settings-reset-actions .btn-danger,
+    .settings-reset-actions .btn-secondary {
+        min-width: 0;
+        flex-basis: 100%;
+    }
+}
+
+@keyframes sheetUp {
+    from { transform: translateY(40px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+/* ---------- Móvil pequeño (≤ 360 px: 320–360 px de ancho) ---------- */
+@media (max-width: 360px) {
+    .container {
+        padding-left: max(0.75rem, var(--safe-left));
+        padding-right: max(0.75rem, var(--safe-right));
+    }
+
+    .logo {
+        font-size: 1.05rem;
+    }
+
+    .navbar-container {
+        gap: 0 0.35rem;
+    }
+
+    #authButton {
+        padding: 0 0.7rem;
+        font-size: 0.85rem;
+    }
+
+    .nav-btn {
+        font-size: 0.64rem;
+    }
+
+    .stat-num {
+        font-size: 1.2rem;
+    }
+
+    .stat-label {
+        font-size: 0.6rem;
+    }
+
+    .card {
+        padding: 1rem;
+    }
+
+    .request-card-header h3 {
+        font-size: 1rem;
+    }
+
+    .history-item {
+        grid-template-columns: 10px minmax(0, 1fr) 4.4rem;
+        column-gap: 0.55rem;
+    }
+}
+
+/* ---------- Móvil horizontal (poco alto): barra inferior compacta ---------- */
+@media (max-width: 950px) and (max-height: 480px) and (orientation: landscape) {
+    :root {
+        --bottom-nav-h: 48px;
+    }
+
+    .nav-links {
+        padding-top: 0.2rem;
+        padding-bottom: calc(0.2rem + var(--safe-bottom));
+    }
+
+    .nav-btn {
+        flex-direction: row;
+        gap: 0.4rem;
+        min-height: 40px;
+        font-size: 0.78rem;
+    }
+
+    .nav-ico {
+        font-size: 1.05rem;
+    }
+
+    .nav-label-extra {
+        display: inline; /* hay ancho de sobra en horizontal */
+    }
+
+    .hero-stats-bar {
+        padding: 0.6rem 0.5rem;
+    }
+
+    /* Una sola fila en la barra superior: logo | usuario | tema | ajustes | ingresar */
+    .navbar-container {
+        grid-template-columns: auto minmax(0, 1fr) auto auto auto;
+        grid-template-areas: "logo user theme settings auth";
+    }
+
+    .user-info {
+        margin: 0 0.5rem;
+        padding-top: 0;
+        border-top: none;
+    }
+
+    .modal {
+        align-items: center;
+        padding: max(0.5rem, var(--safe-top)) max(0.75rem, var(--safe-right)) max(0.5rem, var(--safe-bottom)) max(0.75rem, var(--safe-left));
+    }
+
+    .modal-content {
+        max-width: 520px;
+        max-height: 100%;
+        border-radius: var(--radius-md);
+        animation: modalPop 0.25s ease-out;
+    }
+
+    .toast-container {
+        left: auto;
+        max-width: 380px;
+    }
+}
+
+/* Casillas de materias (registro de tutor): sin el padding/alto de los campos de texto */
+.subject-checkbox input[type="checkbox"] {
+    flex: 0 0 auto;
+    width: 18px;
+    height: 18px;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    accent-color: var(--primary);
+}
+
+@media (max-width: 768px) {
+    .subject-checkbox input[type="checkbox"] {
+        width: 22px;
+        height: 22px;
+    }
+}

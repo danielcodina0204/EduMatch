@@ -1,0 +1,498 @@
+/* ==========================================================================
+ * Selectores propios: lista desplegable, calendario y reloj (ver pickers.js)
+ * Sustituyen a los diálogos nativos de Android, que salían enormes y tapaban todo.
+ * El campo nativo sigue en el DOM pero invisible (.ui-native).
+ * ========================================================================== */
+
+.ui-field {
+    position: relative;
+    width: 100%;
+}
+
+.ui-field > .ui-native {
+    position: absolute !important;
+    inset: 0;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* La tarjeta que contiene un desplegable abierto pasa por encima de sus vecinas */
+.card:has(.ui-field.is-open) {
+    position: relative;
+    z-index: 30;
+}
+
+/* ---------- Botón visible (mismo aspecto que un campo de texto) ---------- */
+.ui-trigger {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    width: 100%;
+    min-height: 44px;
+    padding: 0.6rem 0.85rem;
+    background-color: var(--bg-main);
+    color: var(--text-main);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+    font-size: 0.95rem;
+    line-height: 1.3;
+    text-align: left;
+    cursor: pointer;
+}
+
+.ui-trigger:focus-visible,
+.ui-field.is-open > .ui-trigger {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.ui-trigger:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.ui-trigger__icon,
+.ui-trigger__chevron {
+    display: inline-flex;
+    flex: 0 0 auto;
+    color: var(--text-muted);
+}
+
+.ui-trigger__chevron {
+    margin-left: auto;
+    transition: transform 0.18s ease;
+}
+
+.ui-field.is-open > .ui-trigger .ui-trigger__chevron {
+    transform: rotate(180deg);
+}
+
+.ui-trigger__label {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+}
+
+.ui-trigger.is-placeholder .ui-trigger__label {
+    color: var(--text-muted);
+}
+
+/* ---------- Panel desplegable anclado al campo (solo el select de Materia/Tutor) ---------- */
+.ui-menu {
+    position: absolute;
+    left: 0;
+    top: calc(100% + 6px);
+    z-index: 80;
+    background-color: var(--bg-card);
+    color: var(--text-main);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+    animation: uiMenuIn 0.14s ease-out;
+}
+
+.ui-menu[hidden] {
+    display: none;
+}
+
+.ui-field.is-up > .ui-menu {
+    top: auto;
+    bottom: calc(100% + 6px);
+}
+
+@keyframes uiMenuIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ---------- Panel "tarjeta centrada" (calendario y reloj) ----------
+ * A diferencia del select, el calendario y el reloj NO cuelgan del campo: se
+ * fijan siempre en el mismo lugar de la pantalla (centrados, con un fondo
+ * oscurecido detrás). Así su posición nunca depende de dónde esté el campo ni
+ * de cuánto haya hecho scroll la página, y no hace falta decidir si abrir hacia
+ * arriba o hacia abajo. Ambos se añaden directamente a <body> (ver pickers.js). */
+.ui-popover-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 150;
+    background-color: rgba(15, 23, 42, 0.45);
+}
+
+.ui-popover-backdrop[hidden] {
+    display: none;
+}
+
+[data-theme="dark"] .ui-popover-backdrop {
+    background-color: rgba(0, 0, 0, 0.6);
+}
+
+.ui-menu.ui-popover {
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    z-index: 151;
+    overflow: hidden; /* recorta el encabezado de color a las esquinas redondeadas del panel */
+    transform: translate(-50%, -50%);
+    animation: uiPopIn 0.14s ease-out;
+}
+
+/* Solo un fundido de opacidad: la posición (centrada) no se anima, así no hay
+ * ningún movimiento que pueda leerse como que el panel "se corre" al abrirse. */
+@keyframes uiPopIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* Botón de cerrar (✕) sobre el encabezado de color: blanco translúcido, a juego. */
+.ui-popover__close {
+    display: inline-grid;
+    place-items: center;
+    flex: 0 0 auto;
+    width: 32px;
+    height: 32px;
+    margin-left: auto;
+    background: none;
+    border: none;
+    border-radius: 50%;
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 1.3rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
+@media (hover: hover) {
+    .ui-popover__close:hover {
+        background-color: rgba(255, 255, 255, 0.2);
+        color: #ffffff;
+    }
+}
+
+/* ---------- Lista (select) ---------- */
+.ui-list {
+    right: 0;
+    padding: 0.3rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    outline: none;
+    list-style: none;
+}
+
+.ui-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
+    min-height: 42px;
+    padding: 0.5rem 0.7rem;
+    border-radius: 8px;
+    font-size: 0.92rem;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+    cursor: pointer;
+}
+
+.ui-option.is-placeholder {
+    color: var(--text-muted);
+}
+
+.ui-option.is-active {
+    background-color: var(--primary-light);
+}
+
+.ui-option.is-selected {
+    color: var(--primary);
+    font-weight: 600;
+}
+
+.ui-option.is-selected::after {
+    content: "✓";
+    flex: 0 0 auto;
+    font-weight: 700;
+}
+
+.ui-option[aria-disabled="true"] {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+@media (hover: hover) {
+    .ui-option:hover {
+        background-color: var(--primary-light);
+    }
+}
+
+/* ---------- Calendario compacto ---------- */
+.ui-cal {
+    width: min(320px, 92vw);
+}
+
+/* Encabezado de color: ancla visualmente el panel a la marca de la app en vez de
+ * dejarlo como una tarjeta blanca "flotando" sin relación con el resto de la interfaz. */
+.ui-cal__head {
+    display: flex;
+    align-items: center;
+    gap: 0.1rem;
+    padding: 0.6rem 0.5rem 0.6rem 0.9rem;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
+}
+
+.ui-cal__title {
+    flex: 1 1 auto;
+    text-align: center;
+    color: #ffffff;
+    font-size: 0.92rem;
+    font-weight: 700;
+    text-transform: capitalize;
+}
+
+.ui-cal__nav {
+    display: inline-grid;
+    place-items: center;
+    flex: 0 0 auto;
+    width: 34px;
+    height: 34px;
+    background: none;
+    border: none;
+    border-radius: 50%;
+    color: rgba(255, 255, 255, 0.85);
+    cursor: pointer;
+}
+
+.ui-cal__nav:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+@media (hover: hover) {
+    .ui-cal__nav:not(:disabled):hover {
+        background-color: rgba(255, 255, 255, 0.2);
+        color: #ffffff;
+    }
+}
+
+.ui-cal__body {
+    padding: 0.7rem 0.7rem 0.5rem;
+}
+
+.ui-cal__week,
+.ui-cal__grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 3px;
+}
+
+.ui-cal__week span {
+    padding: 0.2rem 0;
+    text-align: center;
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: var(--text-muted);
+}
+
+/* Días como "chips" circulares (mismo lenguaje visual que las materias/etiquetas
+ * de la app) en vez de casillas cuadradas — se ve más pulido y menos "de sistema". */
+.ui-cal__day {
+    aspect-ratio: 1;
+    width: 100%;
+    background: none;
+    border: 1px solid transparent;
+    border-radius: 50%;
+    color: var(--text-main);
+    font-family: inherit;
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+
+.ui-cal__day.is-today {
+    border-color: var(--primary);
+    color: var(--primary);
+    font-weight: 700;
+}
+
+.ui-cal__day.is-selected {
+    background-color: var(--primary);
+    border-color: var(--primary);
+    color: #ffffff;
+    font-weight: 700;
+    box-shadow: var(--shadow-sm);
+}
+
+.ui-cal__day:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+@media (hover: hover) {
+    .ui-cal__day:not(:disabled):not(.is-selected):hover {
+        background-color: var(--primary-light);
+    }
+}
+
+.ui-cal__foot {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 0.3rem;
+    padding-top: 0.35rem;
+    border-top: 1px dashed var(--border-color);
+}
+
+.ui-link {
+    min-height: 36px;
+    padding: 0 0.6rem;
+    background: none;
+    border: none;
+    border-radius: 8px;
+    color: var(--primary);
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.ui-link--strong {
+    font-weight: 700;
+}
+
+.ui-link:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+/* ---------- Reloj compacto: hora (1-12), minutos y a. m. / p. m. ---------- */
+.ui-time {
+    width: min(300px, 92vw);
+}
+
+/* Mismo encabezado de color que el calendario, con la vista previa grande en blanco. */
+.ui-time__head {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 0.5rem 0.75rem 0.9rem;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
+}
+
+.ui-time__preview {
+    flex: 1 1 auto;
+    color: #ffffff;
+    font-size: 1.4rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.01em;
+}
+
+.ui-time__body {
+    padding: 0.7rem 0.7rem 0.5rem;
+}
+
+.ui-time__cols {
+    display: grid;
+    grid-template-columns: 1.1fr 1.1fr 0.9fr;
+    gap: 0.4rem;
+}
+
+.ui-time__cap {
+    display: block;
+    margin-bottom: 0.25rem;
+    text-align: center;
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+.ui-time__col {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    max-height: 176px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-right: 2px;
+}
+
+/* Horas/minutos como "píldoras" (mismo lenguaje visual que las etiquetas de
+ * materias de la app), no botones cuadrados de diálogo de sistema. */
+.ui-time__opt {
+    flex: 0 0 auto;
+    height: 38px;
+    background: none;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    color: var(--text-main);
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-variant-numeric: tabular-nums;
+    cursor: pointer;
+}
+
+.ui-time__opt.is-selected {
+    background-color: var(--primary);
+    border-color: var(--primary);
+    color: #ffffff;
+    font-weight: 700;
+    box-shadow: var(--shadow-sm);
+}
+
+@media (hover: hover) {
+    .ui-time__opt:not(.is-selected):hover {
+        background-color: var(--primary-light);
+    }
+}
+
+/* Columna a. m. / p. m.: dos botones fijos, sin scroll (no son 12 opciones). */
+.ui-time__ampm {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.ui-time__ampm .ui-time__opt {
+    height: auto;
+    flex: 1 1 0;
+    min-height: 44px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-transform: lowercase;
+}
+
+/* ---------- Móvil ---------- */
+@media (max-width: 768px) {
+    .ui-option {
+        min-height: 46px;
+    }
+
+    .ui-time__opt {
+        height: 42px;
+    }
+
+    /* .ui-cal__day mantiene aspect-ratio:1 (círculo) también en móvil: si se le
+     * fijara un `height` aquí, el ancho (100% de la columna) dejaría de ser
+     * cuadrado y perdería la forma circular. */
+    .ui-time__ampm .ui-time__opt {
+        height: auto;
+    }
+
+    .ui-cal__nav {
+        width: 40px;
+        height: 40px;
+    }
+
+    .ui-cal,
+    .ui-time {
+        width: min(340px, 94vw);
+    }
+}
+

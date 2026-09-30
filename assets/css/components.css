@@ -1,0 +1,398 @@
+/* Botones */
+.btn-primary {
+    background-color: var(--primary);
+    color: #ffffff;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    box-shadow: var(--shadow-sm);
+    transition: transform 0.15s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.btn-primary:hover {
+    background-color: var(--primary-hover);
+}
+
+/* El "levantar" del botón solo en dispositivos con puntero: en pantallas táctiles
+ * el estado :hover se queda pegado tras tocar y el botón parecería atascado. */
+@media (hover: hover) {
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+    }
+}
+
+.btn-primary:active {
+    transform: translateY(0);
+}
+
+.btn-secondary {
+    background-color: transparent;
+    color: var(--primary);
+    border: 2px solid var(--primary);
+    padding: 0.65rem 1.25rem;
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-secondary:hover {
+    background-color: var(--primary-light);
+}
+
+.btn-danger {
+    background-color: transparent;
+    color: var(--danger);
+    border: 2px solid var(--danger);
+    padding: 0.65rem 1.25rem;
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-danger:hover {
+    background-color: var(--danger-light);
+}
+
+.btn-block {
+    width: 100%;
+    margin-bottom: 0.5rem;
+}
+
+/* Tarjetas */
+.card {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 1.5rem;
+    box-shadow: var(--shadow-sm);
+}
+
+/* Formularios */
+.form-group {
+    margin-bottom: 1.25rem;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+@media (max-width: 640px) {
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.4rem;
+    font-weight: 600;
+    font-size: 0.88rem;
+    color: var(--text-main);
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    background-color: var(--bg-main);
+    color: var(--text-main);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    font-size: 0.95rem;
+    outline: none;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+/* Inputs nativos de fecha/hora: el input completo debe abrir el selector,
+ * no solo el icono (ver punto 3 del encargo), y el icono debe contrastar
+ * en modo oscuro usando `color-scheme` en vez de filtros/recortes manuales
+ * (ver punto 4). Aplica tanto a los inputs del formulario de solicitud como
+ * a los del mini-formulario "Proponer otro horario". */
+input[type="date"],
+input[type="time"] {
+    color-scheme: light;
+    cursor: pointer;
+}
+
+[data-theme="dark"] input[type="date"],
+[data-theme="dark"] input[type="time"] {
+    color-scheme: dark;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    padding: 0.3rem;
+    margin-right: -0.2rem;
+    border-radius: var(--radius-sm);
+    opacity: 0.85;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator:hover,
+input[type="time"]::-webkit-calendar-picker-indicator:hover {
+    opacity: 1;
+    background-color: var(--primary-light);
+}
+
+.subject-checkbox-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    max-height: 160px;
+    overflow-y: auto;
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background-color: var(--bg-main);
+}
+
+.subject-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    cursor: pointer;
+}
+
+.subject-checkbox input {
+    width: auto;
+}
+
+/* Campo de contraseña con botón de mostrar/ocultar (ojito) */
+.password-field {
+    position: relative;
+}
+
+.password-field input {
+    padding-right: 2.6rem;
+}
+
+.password-toggle {
+    position: absolute;
+    top: 50%;
+    right: 0.6rem;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.25rem;
+    color: var(--text-muted);
+    line-height: 0;
+}
+
+.password-toggle svg {
+    display: block;
+}
+
+.password-toggle:hover {
+    color: var(--text-main);
+}
+
+/* Modal de cuenta (Crear cuenta / Iniciar sesión): versión más compacta,
+ * ya que el listado de materias del tutor lo hacía sentir demasiado grande. */
+#authModal .modal-content {
+    padding: 1.25rem 1.5rem 1.1rem;
+}
+
+#authModal .form-group {
+    margin-bottom: 0.9rem;
+}
+
+#authModal .form-group label {
+    font-size: 0.82rem;
+    margin-bottom: 0.3rem;
+}
+
+#authModal .form-group input,
+#authModal .form-group select,
+#authModal .form-group textarea {
+    padding: 0.6rem 0.85rem;
+    font-size: 0.88rem;
+}
+
+#authModal .form-group .password-field input {
+    padding: 0.6rem 2.4rem 0.6rem 0.85rem;
+}
+
+#authModal .auth-tabs {
+    margin-bottom: 1rem;
+}
+
+#authModal .auth-tab {
+    padding: 0.55rem;
+    font-size: 0.88rem;
+}
+
+#authModal .role-selector {
+    margin-bottom: 1rem;
+}
+
+#authModal .role-btn {
+    padding: 0.6rem;
+    font-size: 0.88rem;
+}
+
+#authModal .subject-checkbox-list {
+    max-height: 130px;
+    padding: 0.6rem;
+    gap: 0.3rem;
+}
+
+#authModal .subject-checkbox {
+    font-size: 0.85rem;
+}
+
+#authModal #tutorFields .field-hint {
+    font-size: 0.72rem;
+    margin-top: 0.35rem;
+}
+
+#authModal button[type="submit"] {
+    padding: 0.65rem 1.5rem;
+    font-size: 0.9rem;
+}
+
+/* Badges / Etiquetas */
+.badge {
+    display: inline-block;
+    padding: 0.25rem 0.65rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    border-radius: 20px;
+    background-color: var(--primary-light);
+    color: var(--primary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.badge-status-pendiente { background-color: #fef3c7; color: #92400e; }
+.badge-status-aceptada { background-color: #d1fae5; color: #065f46; }
+.badge-status-rechazada { background-color: #fee2e2; color: #991b1b; }
+.badge-status-propuesta { background-color: #ede9fe; color: #5b21b6; }
+.badge-status-cancelada { background-color: #e2e8f0; color: #334155; }
+.badge-status-realizada { background-color: #dbeafe; color: #1e40af; }
+
+/* En modo oscuro los tonos pastel de arriba pierden contraste; se usan
+ * versiones translúcidas del mismo color sobre el fondo oscuro neutro. */
+[data-theme="dark"] .badge-status-pendiente { background-color: rgba(217, 119, 6, 0.18); color: #fbbf24; }
+[data-theme="dark"] .badge-status-aceptada { background-color: rgba(5, 150, 105, 0.18); color: #34d399; }
+[data-theme="dark"] .badge-status-rechazada { background-color: rgba(220, 38, 38, 0.18); color: #f87171; }
+[data-theme="dark"] .badge-status-propuesta { background-color: rgba(124, 58, 237, 0.2); color: #c4b5fd; }
+[data-theme="dark"] .badge-status-cancelada { background-color: rgba(148, 163, 184, 0.18); color: #cbd5e1; }
+[data-theme="dark"] .badge-status-realizada { background-color: rgba(91, 155, 245, 0.18); color: #93c5fd; }
+
+/* Estados vacíos */
+.empty-state {
+    grid-column: 1/-1;
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-muted);
+}
+
+.empty-state-card {
+    grid-column: 1/-1;
+    text-align: center;
+    padding: 3rem;
+}
+
+.empty-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+/* Toast Notifications: compactos, de una o dos líneas, y con vida corta (ver showToast). */
+.toast-container {
+    position: fixed;
+    bottom: calc(20px + var(--safe-bottom));
+    right: calc(20px + var(--safe-right));
+    max-width: calc(100vw - 40px);
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+    pointer-events: none; /* el contenedor no tapa toques; solo los avisos */
+}
+
+.toast {
+    background-color: var(--bg-card);
+    color: var(--text-main);
+    border: 1px solid var(--border-color);
+    border-left: 3px solid var(--primary);
+    padding: 0.5rem 0.8rem;
+    max-width: min(92vw, 340px);
+    border-radius: 10px;
+    box-shadow: var(--shadow-md);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.82rem;
+    line-height: 1.3;
+    pointer-events: auto;
+    cursor: pointer;
+    animation: slideIn 0.22s ease-out;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.toast--success { border-left-color: var(--accent); }
+.toast--error { border-left-color: var(--danger); }
+
+.toast.is-leaving {
+    opacity: 0;
+    transform: translateY(6px);
+}
+
+.toast-icon {
+    flex: 0 0 auto;
+    font-size: 0.95rem;
+    line-height: 1;
+}
+
+.toast-msg {
+    flex: 1;
+    min-width: 0;
+}
+
+.toast-action {
+    flex: 0 0 auto;
+    background: none;
+    border: none;
+    color: var(--primary);
+    font-family: inherit;
+    font-weight: 700;
+    font-size: 0.82rem;
+    text-decoration: underline;
+    cursor: pointer;
+    white-space: nowrap;
+    padding: 0.35rem 0.1rem 0.35rem 0.4rem;
+}
+
+@keyframes slideIn {
+    from { transform: translateY(8px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}

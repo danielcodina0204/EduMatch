@@ -1,0 +1,195 @@
+/* Tipografía incluida en el proyecto (assets/fonts/): Plus Jakarta Sans, fuente
+ * variable (pesos 200–800) con licencia SIL OFL. Va empaquetada para que la app
+ * de Android se vea igual SIN internet; no depende de Google Fonts.
+ * "latin" cubre el español (á é í ó ú ñ ü ¿ ¡); "latin-ext" solo se descarga si
+ * aparece algún carácter fuera de ese rango. */
+@font-face {
+    font-family: 'Plus Jakarta Sans';
+    font-style: normal;
+    font-weight: 200 800;
+    font-display: swap;
+    src: url('../fonts/plus-jakarta-sans-latin-ext-wght-normal.woff2') format('woff2');
+    unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+    font-family: 'Plus Jakarta Sans';
+    font-style: normal;
+    font-weight: 200 800;
+    font-display: swap;
+    src: url('../fonts/plus-jakarta-sans-latin-wght-normal.woff2') format('woff2');
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* Variables Globales y Modos Claro / Oscuro */
+:root {
+    --bg-main: #f1f5f9;
+    --bg-card: #ffffff;
+    --bg-nav: #ffffff;
+    --text-main: #0f172a;
+    --text-muted: #64748b;
+    --border-color: #e2e8f0;
+
+    --primary: #2563eb;
+    --primary-hover: #1d4ed8;
+    --primary-light: #eff6ff;
+
+    --danger: #dc2626;
+    --danger-hover: #b91c1c;
+    --danger-light: #fee2e2;
+
+    --accent: #10b981;
+    --accent-hover: #059669;
+
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 18px;
+
+    --font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+
+    /* Zonas seguras (muesca, barra de estado y barra de gestos de Android).
+     * Valen 0 en un navegador de escritorio, así que la versión web no cambia. */
+    /* En la app de Android, Capacitor 8 (plugin SystemBars) NO usa env(): inyecta las
+     * variables --safe-area-inset-* en <html>. Por eso se lee primero esa variable y,
+     * si no existe (navegador, iOS), se usa env(). */
+    --safe-top: var(--safe-area-inset-top, env(safe-area-inset-top, 0px));
+    --safe-right: var(--safe-area-inset-right, env(safe-area-inset-right, 0px));
+    --safe-bottom: var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
+    --safe-left: var(--safe-area-inset-left, env(safe-area-inset-left, 0px));
+    --bottom-nav-h: 64px; /* alto de la barra de pestañas inferior (móvil / app) */
+
+    color-scheme: light;
+}
+
+/* Modo oscuro: paleta neutra (grises), NO azul dominante. El azul queda
+ * reservado como color de acento/acción (botones, enlaces, foco), tal como
+ * en modo claro — solo se ajusta su tono para que tenga contraste suficiente
+ * sobre fondos oscuros. */
+[data-theme="dark"] {
+    --bg-main: #1a1b1e;
+    --bg-card: #242529;
+    --bg-nav: #202124;
+    --text-main: #e4e4e7;
+    --text-muted: #9b9ba3;
+    --border-color: #38393f;
+
+    --primary: #5b9bf5;
+    --primary-hover: #7db0f7;
+    --primary-light: rgba(91, 155, 245, 0.14);
+
+    --danger: #ee8080;
+    --danger-hover: #f29999;
+    --danger-light: rgba(238, 128, 128, 0.14);
+
+    --accent: #4ade9a;
+    --accent-hover: #34d399;
+
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.25);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.22);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.35), 0 4px 6px -2px rgba(0, 0, 0, 0.22);
+
+    color-scheme: dark;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: var(--font-family);
+    transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease;
+}
+
+html {
+    background-color: var(--bg-main); /* también detrás del "rebote" de scroll y bajo las barras del sistema */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+}
+
+body {
+    background-color: var(--bg-main);
+    color: var(--text-main);
+    line-height: 1.6;
+    min-height: 100vh;
+    min-height: 100dvh; /* en móvil 100vh incluye la barra del navegador y provoca scroll de más */
+}
+
+/* Sin el retraso de 300 ms ni el zoom por doble toque en controles */
+button, a, select, label, summary, [role="button"], [data-action], input[type="checkbox"] {
+    touch-action: manipulation;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 2rem auto;
+    padding: 0 max(1.5rem, var(--safe-left)) 0 max(1.5rem, var(--safe-right));
+}
+
+.tab-content {
+    display: none;
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+h2 {
+    margin-bottom: 0.5rem;
+}
+
+.field-hint {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    margin-top: 0.4rem;
+}
+
+.field-hint-inline {
+    font-weight: 400;
+    color: var(--text-muted);
+    font-size: 0.8em;
+    text-transform: none;
+}
+
+/* ---------- Versión APP (Capacitor / Android) ----------
+ * main.js añade `is-app` a <html> dentro de la app (o con ?app=1 en el
+ * navegador). Aquí solo van las diferencias de comportamiento respecto a la web. */
+html.is-app body {
+    -webkit-user-select: none;
+    user-select: none;                    /* una app no selecciona texto al mantener pulsado */
+    -webkit-touch-callout: none;
+}
+
+html.is-app input,
+html.is-app textarea,
+html.is-app .selectable {
+    -webkit-user-select: text;
+    user-select: text;
+}
+
+/* Evita cualquier desbordamiento horizontal accidental (responsive).
+ *
+ * IMPORTANTE (bug de scroll en la app): NO poner `overflow-x: hidden` a <html> Y a
+ * <body> a la vez. Si ambos tienen overflow distinto de `visible`, <body> pasa a ser un
+ * contenedor de scroll propio y en el WebView de Android el gesto de arrastrar con el
+ * dedo deja de mover la página. Aquí solo <body> lleva la regla (así su overflow se
+ * propaga al viewport y no crea un contenedor de scroll) y `clip` ni siquiera genera
+ * scroll; `hidden` queda de respaldo para WebViews muy antiguos. */
+html {
+    max-width: 100%;
+}
+
+body {
+    max-width: 100%;
+    overflow-x: hidden;
+    overflow-x: clip;
+}

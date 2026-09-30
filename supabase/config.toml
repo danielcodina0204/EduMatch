@@ -1,0 +1,15 @@
+project_id = "edumatch"
+
+[api]
+enabled = true
+
+[db]
+major_version = 17
+
+[studio]
+enabled = true
+
+[auth]
+enabled = true
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["capacitor://localhost", "http://localhost"]
