@@ -8,7 +8,7 @@
   },
   "scripts": {
     "build:web": "node scripts/build-web.js",
-    "test": "npm run test:unit",
+    "test": "npm run test:unit && npm run test:db",
     "cap:sync": "npm run build:web && npx cap sync android",
     "android:open": "npm run cap:sync && npx cap open android",
     "android:run": "npm run cap:sync && npx cap run android",
@@ -17,7 +17,7 @@
     "android:bundle": "npm run cap:sync && node scripts/gradle.js bundleRelease",
     "assets": "capacitor-assets generate --android --assetPath resources",
     "test:unit": "node tests/unit.js",
-    "test:e2e": "node tests/e2e.js"
+    "test:db": "node tests/db-rls.js"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.2",
@@ -26,6 +26,7 @@
   },
   "devDependencies": {
     "@capacitor/assets": "^3.0.5",
-    "@capacitor/cli": "^8.5.2"
+    "@capacitor/cli": "^8.5.2",
+    "@electric-sql/pglite": "^0.5.8"
   }
 }

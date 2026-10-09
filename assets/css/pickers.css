@@ -1,8 +1,4 @@
-/* ==========================================================================
- * Selectores propios: lista desplegable, calendario y reloj (ver pickers.js)
- * Sustituyen a los diálogos nativos de Android, que salían enormes y tapaban todo.
- * El campo nativo sigue en el DOM pero invisible (.ui-native).
- * ========================================================================== */
+
 
 .ui-field {
     position: relative;
@@ -22,13 +18,13 @@
     pointer-events: none;
 }
 
-/* La tarjeta que contiene un desplegable abierto pasa por encima de sus vecinas */
+
 .card:has(.ui-field.is-open) {
     position: relative;
     z-index: 30;
 }
 
-/* ---------- Botón visible (mismo aspecto que un campo de texto) ---------- */
+
 .ui-trigger {
     display: flex;
     align-items: center;
@@ -89,7 +85,7 @@
     color: var(--text-muted);
 }
 
-/* ---------- Panel desplegable anclado al campo (solo el select de Materia/Tutor) ---------- */
+
 .ui-menu {
     position: absolute;
     left: 0;
@@ -117,12 +113,7 @@
     to { opacity: 1; transform: translateY(0); }
 }
 
-/* ---------- Panel "tarjeta centrada" (calendario y reloj) ----------
- * A diferencia del select, el calendario y el reloj NO cuelgan del campo: se
- * fijan siempre en el mismo lugar de la pantalla (centrados, con un fondo
- * oscurecido detrás). Así su posición nunca depende de dónde esté el campo ni
- * de cuánto haya hecho scroll la página, y no hace falta decidir si abrir hacia
- * arriba o hacia abajo. Ambos se añaden directamente a <body> (ver pickers.js). */
+
 .ui-popover-backdrop {
     position: fixed;
     inset: 0;
@@ -143,19 +134,18 @@
     left: 50%;
     top: 50%;
     z-index: 151;
-    overflow: hidden; /* recorta el encabezado de color a las esquinas redondeadas del panel */
+    overflow: hidden; 
     transform: translate(-50%, -50%);
     animation: uiPopIn 0.14s ease-out;
 }
 
-/* Solo un fundido de opacidad: la posición (centrada) no se anima, así no hay
- * ningún movimiento que pueda leerse como que el panel "se corre" al abrirse. */
+
 @keyframes uiPopIn {
     from { opacity: 0; }
     to { opacity: 1; }
 }
 
-/* Botón de cerrar (✕) sobre el encabezado de color: blanco translúcido, a juego. */
+
 .ui-popover__close {
     display: inline-grid;
     place-items: center;
@@ -179,7 +169,7 @@
     }
 }
 
-/* ---------- Lista (select) ---------- */
+
 .ui-list {
     right: 0;
     padding: 0.3rem;
@@ -233,13 +223,12 @@
     }
 }
 
-/* ---------- Calendario compacto ---------- */
+
 .ui-cal {
     width: min(320px, 92vw);
 }
 
-/* Encabezado de color: ancla visualmente el panel a la marca de la app en vez de
- * dejarlo como una tarjeta blanca "flotando" sin relación con el resto de la interfaz. */
+
 .ui-cal__head {
     display: flex;
     align-items: center;
@@ -301,8 +290,7 @@
     color: var(--text-muted);
 }
 
-/* Días como "chips" circulares (mismo lenguaje visual que las materias/etiquetas
- * de la app) en vez de casillas cuadradas — se ve más pulido y menos "de sistema". */
+
 .ui-cal__day {
     aspect-ratio: 1;
     width: 100%;
@@ -370,12 +358,12 @@
     cursor: not-allowed;
 }
 
-/* ---------- Reloj compacto: hora (1-12), minutos y a. m. / p. m. ---------- */
+
 .ui-time {
     width: min(300px, 92vw);
 }
 
-/* Mismo encabezado de color que el calendario, con la vista previa grande en blanco. */
+
 .ui-time__head {
     display: flex;
     align-items: center;
@@ -423,8 +411,7 @@
     padding-right: 2px;
 }
 
-/* Horas/minutos como "píldoras" (mismo lenguaje visual que las etiquetas de
- * materias de la app), no botones cuadrados de diálogo de sistema. */
+
 .ui-time__opt {
     flex: 0 0 auto;
     height: 38px;
@@ -452,7 +439,7 @@
     }
 }
 
-/* Columna a. m. / p. m.: dos botones fijos, sin scroll (no son 12 opciones). */
+
 .ui-time__ampm {
     display: flex;
     flex-direction: column;
@@ -468,7 +455,7 @@
     text-transform: lowercase;
 }
 
-/* ---------- Móvil ---------- */
+
 @media (max-width: 768px) {
     .ui-option {
         min-height: 46px;
@@ -478,9 +465,7 @@
         height: 42px;
     }
 
-    /* .ui-cal__day mantiene aspect-ratio:1 (círculo) también en móvil: si se le
-     * fijara un `height` aquí, el ancho (100% de la columna) dejaría de ser
-     * cuadrado y perdería la forma circular. */
+    
     .ui-time__ampm .ui-time__opt {
         height: auto;
     }

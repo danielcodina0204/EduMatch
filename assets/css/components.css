@@ -1,4 +1,4 @@
-/* Botones */
+
 .btn-primary {
     background-color: var(--primary);
     color: #ffffff;
@@ -20,8 +20,7 @@
     background-color: var(--primary-hover);
 }
 
-/* El "levantar" del botón solo en dispositivos con puntero: en pantallas táctiles
- * el estado :hover se queda pegado tras tocar y el botón parecería atascado. */
+
 @media (hover: hover) {
     .btn-primary:hover {
         transform: translateY(-2px);
@@ -70,7 +69,7 @@
     margin-bottom: 0.5rem;
 }
 
-/* Tarjetas */
+
 .card {
     background-color: var(--bg-card);
     border: 1px solid var(--border-color);
@@ -79,7 +78,7 @@
     box-shadow: var(--shadow-sm);
 }
 
-/* Formularios */
+
 .form-group {
     margin-bottom: 1.25rem;
 }
@@ -124,11 +123,7 @@
     box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
 }
 
-/* Inputs nativos de fecha/hora: el input completo debe abrir el selector,
- * no solo el icono (ver punto 3 del encargo), y el icono debe contrastar
- * en modo oscuro usando `color-scheme` en vez de filtros/recortes manuales
- * (ver punto 4). Aplica tanto a los inputs del formulario de solicitud como
- * a los del mini-formulario "Proponer otro horario". */
+
 input[type="date"],
 input[type="time"] {
     color-scheme: light;
@@ -179,7 +174,7 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
     width: auto;
 }
 
-/* Campo de contraseña con botón de mostrar/ocultar (ojito) */
+
 .password-field {
     position: relative;
 }
@@ -212,8 +207,7 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
     color: var(--text-main);
 }
 
-/* Modal de cuenta (Crear cuenta / Iniciar sesión): versión más compacta,
- * ya que el listado de materias del tutor lo hacía sentir demasiado grande. */
+
 #authModal .modal-content {
     padding: 1.25rem 1.5rem 1.1rem;
 }
@@ -276,7 +270,7 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
     font-size: 0.9rem;
 }
 
-/* Badges / Etiquetas */
+
 .badge {
     display: inline-block;
     padding: 0.25rem 0.65rem;
@@ -296,8 +290,7 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
 .badge-status-cancelada { background-color: #e2e8f0; color: #334155; }
 .badge-status-realizada { background-color: #dbeafe; color: #1e40af; }
 
-/* En modo oscuro los tonos pastel de arriba pierden contraste; se usan
- * versiones translúcidas del mismo color sobre el fondo oscuro neutro. */
+
 [data-theme="dark"] .badge-status-pendiente { background-color: rgba(217, 119, 6, 0.18); color: #fbbf24; }
 [data-theme="dark"] .badge-status-aceptada { background-color: rgba(5, 150, 105, 0.18); color: #34d399; }
 [data-theme="dark"] .badge-status-rechazada { background-color: rgba(220, 38, 38, 0.18); color: #f87171; }
@@ -305,7 +298,7 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
 [data-theme="dark"] .badge-status-cancelada { background-color: rgba(148, 163, 184, 0.18); color: #cbd5e1; }
 [data-theme="dark"] .badge-status-realizada { background-color: rgba(91, 155, 245, 0.18); color: #93c5fd; }
 
-/* Estados vacíos */
+
 .empty-state {
     grid-column: 1/-1;
     text-align: center;
@@ -325,7 +318,7 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
     margin-bottom: 0.5rem;
 }
 
-/* Toast Notifications: compactos, de una o dos líneas, y con vida corta (ver showToast). */
+
 .toast-container {
     position: fixed;
     bottom: calc(20px + var(--safe-bottom));
@@ -336,7 +329,7 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
     flex-direction: column;
     align-items: flex-end;
     gap: 8px;
-    pointer-events: none; /* el contenedor no tapa toques; solo los avisos */
+    pointer-events: none; 
 }
 
 .toast {

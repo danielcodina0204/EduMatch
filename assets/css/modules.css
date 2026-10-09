@@ -1,4 +1,4 @@
-/* Navbar */
+
 .navbar {
     background-color: var(--bg-nav);
     border-bottom: 1px solid var(--border-color);
@@ -6,7 +6,7 @@
     top: 0;
     z-index: 100;
     backdrop-filter: blur(10px);
-    padding-top: var(--safe-top); /* la barra llega hasta arriba del todo, bajo la barra de estado */
+    padding-top: var(--safe-top); 
 }
 
 .navbar-container {
@@ -54,7 +54,7 @@
     font-family: inherit;
 }
 
-/* Icono y texto abreviado: solo se usan en la barra inferior móvil */
+
 .nav-ico {
     display: none;
 }
@@ -104,7 +104,7 @@
     font-size: 1.1rem;
 }
 
-/* Barra de estadísticas */
+
 .hero-stats-bar {
     display: flex;
     gap: 1.5rem;
@@ -116,8 +116,7 @@
     box-shadow: var(--shadow-md);
 }
 
-/* Modo oscuro: el degradado usa azules profundos; con el azul claro del acento el
- * texto blanco casi no se leía (contraste ~2:1). */
+
 [data-theme="dark"] .hero-stats-bar {
     background: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 100%);
 }
@@ -139,7 +138,7 @@
     opacity: 0.85;
 }
 
-/* Encabezado de sección */
+
 .section-header {
     display: flex;
     justify-content: space-between;
@@ -163,7 +162,7 @@
     color: var(--text-main);
 }
 
-/* Grid de tarjetas (materias / tutores) */
+
 .grid-cards {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
@@ -203,16 +202,7 @@
     font-size: 0.9rem;
 }
 
-/* ==========================================================================
- * Tutores disponibles
- * Una sola estructura para TODAS las tarjetas:
- *   .tutor-card
- *     .tutor-card__body     (flex:1)  nombre + etiqueta, correo, materias
- *     .tutor-card__actions  (fondo)   botón "Solicitar con este tutor"
- *     .tutor-card__manage   (solo la tarjeta propia) gestión de materias/perfil
- * El botón queda anclado al fondo con el body en flex:1, así que su posición
- * no depende de cuánto texto o cuántas materias tenga cada tutor.
- * ========================================================================== */
+
 .tutor-card {
     display: flex;
     flex-direction: column;
@@ -309,7 +299,7 @@
     padding: 0;
 }
 
-/* Botones de la tarjeta: mismo alto, padding y tipografía en todas. */
+
 .tutor-card .btn-block {
     display: flex;
     align-items: center;
@@ -321,8 +311,7 @@
     line-height: 1.2;
 }
 
-/* Tarjeta del propio tutor: ancho completo, perfil a la izquierda y gestión
- * a la derecha, para que no estire a las tarjetas de los demás tutores. */
+
 .tutor-card--own {
     grid-column: 1 / -1;
     display: grid;
@@ -383,7 +372,7 @@
     box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
 }
 
-/* Modal de cuenta */
+
 .modal {
     display: none;
     position: fixed;
@@ -406,7 +395,7 @@
     max-height: 90vh;
     max-height: min(90dvh, 100%);
     overflow-y: auto;
-    overscroll-behavior: contain; /* el scroll del modal no arrastra la página de detrás */
+    overscroll-behavior: contain; 
     position: relative;
     animation: modalPop 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
@@ -440,7 +429,7 @@
 }
 
 #authModal .modal-content {
-    padding-top: 3rem; /* deja libre la X de cerrar sobre las pestañas */
+    padding-top: 3rem; 
 }
 
 .auth-tabs {
@@ -489,7 +478,7 @@
     color: var(--primary);
 }
 
-/* Modal de Configuración */
+
 .settings-modal-content h3 {
     margin-bottom: 0.4rem;
 }
@@ -553,29 +542,18 @@
     transform: none;
 }
 
-/* Historial de solicitudes */
+
 .requests-list {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
     gap: 1.25rem;
 }
 
-/* ---------- Tarjeta de solicitud ----------
- * Filas FIJAS, iguales para todos los estados y roles:
- *
- *   1. .request-card-header  materia (1 línea) + estado
- *   2. .request-details      Estudiante / Tutor / Tema / Fecha (1 línea c/u)
- *   3. .request-info         aviso de estado (siempre presente, alto mínimo)
- *   4. .request-meta         "Ver historial" + fecha de creación
- *   5. .request-actions      botones, pegados al fondo
- *
- * Los textos largos se recortan con "…" (el texto completo queda en el
- * atributo title) en vez de partirse en varias líneas: así ninguna tarjeta
- * empuja hacia abajo las líneas de la de al lado. */
+
 .request-card {
     border-left: 4px solid var(--primary);
     display: grid;
-    /* minmax(0, 1fr): sin esto un título largo ensancha la columna y desborda la tarjeta */
+    
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto auto 1fr auto auto;
     row-gap: 0.75rem;
@@ -634,11 +612,11 @@
     min-height: 4.8rem;
 }
 
-/* Mensajes de estado / información adicional (rechazo, propuesta, etc.) */
+
 .request-notice {
     flex: 1 1 auto;
     display: flex;
-    align-items: center; /* el texto queda centrado en el recuadro, sin "aire" arriba/abajo */
+    align-items: center; 
     margin: 0;
     padding: 0.6rem 0.8rem;
     font-size: 0.85rem;
@@ -649,7 +627,7 @@
     overflow-wrap: anywhere;
 }
 
-/* Formularios / selectores dentro de la tarjeta */
+
 .request-panel {
     padding-top: 0.75rem;
     border-top: 1px dashed var(--border-color);
@@ -675,9 +653,7 @@
     resize: vertical;
 }
 
-/* Pie de la tarjeta: fila de fechas (Creada ... cierre) + "Ver historial".
- * Siempre dos filas de una línea cada una, en el mismo orden, para que ese
- * bloque mida igual en todas las tarjetas. */
+
 .request-meta {
     display: flex;
     flex-direction: column;
@@ -712,17 +688,14 @@
     text-decoration: underline;
 }
 
-/* ---------- Historial de una solicitud (ventana) ----------
- * Compacto: cabecera mínima (materia, estado, la otra parte) + línea de tiempo
- * de tres columnas [punto | qué pasó | fecha]. Las fechas van alineadas a la
- * derecha en una columna de ancho fijo y los puntos sobre una misma línea. */
+
 .history-modal-content {
     max-width: 420px;
     padding: 1.25rem 1.4rem;
 }
 
 .history-header {
-    padding-right: 2.5rem; /* deja libre la X de cerrar (40 px) */
+    padding-right: 2.5rem; 
     margin-bottom: 1rem;
     padding-bottom: 0.85rem;
     border-bottom: 1px solid var(--border-color);
@@ -771,8 +744,7 @@
     position: relative;
 }
 
-/* Conector: cada evento dibuja su tramo desde su punto hasta el punto del
- * siguiente; el último no dibuja nada, así la línea termina en el último punto. */
+
 .history-item:not(:last-child)::before {
     content: '';
     position: absolute;
@@ -800,7 +772,7 @@
     position: relative;
     z-index: 1;
     background: var(--history-dot);
-    box-shadow: 0 0 0 3px var(--bg-card); /* recorta la línea alrededor del punto */
+    box-shadow: 0 0 0 3px var(--bg-card); 
 }
 
 .history-item--success { --history-dot: var(--accent); }
@@ -844,10 +816,7 @@
     color: var(--text-muted);
 }
 
-/* Acciones: cuadrícula de 2 columnas. Con 1 botón ocupa todo el ancho; con 2
- * van lado a lado; con 3 el último ocupa toda la fila; y así sucesivamente.
- * TODOS los botones comparten alto, padding, borde y tamaño de letra, sin
- * importar su variante (primary / secondary / danger). */
+
 .request-actions {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -884,12 +853,12 @@
     grid-column: 1 / -1;
 }
 
-/* El botón principal no debe "saltar" distinto que los demás al pasar el mouse */
+
 .request-actions > .btn-primary:hover {
     transform: none;
 }
 
-/* Botones de los formularios dentro de la tarjeta: mismo alto que las acciones */
+
 .request-card .request-panel .btn-block {
     box-sizing: border-box;
     height: 44px;
@@ -898,7 +867,7 @@
     border: 2px solid var(--primary);
 }
 
-/* Valoraciones */
+
 .rating-box {
     width: 100%;
     margin-top: 0.75rem;
@@ -948,11 +917,7 @@
     font-size: 1rem;
 }
 
-/* Tarjetita con la propuesta de horario del tutor, dentro de la tarjeta de
- * solicitud del estudiante. Los botones "Aceptar horario"/"Rechazar
- * propuesta" NO van dentro de este bloque: son hijos directos de
- * .request-actions para heredar el mismo layout (flex, gap, ancho) que el
- * resto de botones de la tarjeta. */
+
 .schedule-proposal {
     flex: 1 1 auto;
     display: flex;
@@ -975,7 +940,7 @@
     color: var(--primary);
 }
 
-/* Modal de confirmación (rechazar solicitud / propuesta) */
+
 .confirm-modal-content {
     max-width: 420px;
 }
@@ -998,28 +963,15 @@
 }
 
 
-/* ==========================================================================
- * RESPONSIVE — dos versiones con el mismo HTML
- *
- *   WEB  (> 768 px)  Enlaces arriba, dentro del navbar.
- *   APP  (≤ 768 px)  Barra superior mínima + barra de pestañas INFERIOR
- *                    (como una app nativa) — es lo que ve Capacitor/Android.
- *
- * Puntos de corte:
- *   769–1100  tablet horizontal / portátil pequeño: pestañas en 2.ª fila
- *   ≤ 768     tablet vertical y móvil: barra inferior, tarjetas a 1–2 columnas
- *   ≤ 480     móvil: formularios y botones a ancho completo, modales tipo "sheet"
- *   ≤ 360     móvil pequeño (320–360 px): tipografías y espacios más ajustados
- *   móvil horizontal (alto ≤ 480): barra inferior compacta
- * ========================================================================== */
 
-/* ---------- Tablet horizontal / portátil pequeño (769–1100 px) ---------- */
+
+
 @media (min-width: 769px) and (max-width: 1100px) {
     .navbar-container {
         row-gap: 0.4rem;
     }
 
-    /* El logo y las acciones en la primera fila; las pestañas centradas debajo */
+    
     .nav-links {
         order: 3;
         width: 100%;
@@ -1032,14 +984,14 @@
     }
 }
 
-/* ---------- Tablet vertical y móvil: versión APP (≤ 768 px, o móvil en horizontal) ---------- */
+
 @media (max-width: 768px),
        (max-width: 950px) and (max-height: 480px) and (orientation: landscape) {
     .container {
         margin: 1rem auto 0;
         padding-left: max(1rem, var(--safe-left));
         padding-right: max(1rem, var(--safe-right));
-        /* deja libre la barra inferior fija + la barra de gestos */
+        
         padding-bottom: calc(var(--bottom-nav-h) + var(--safe-bottom) + 1.5rem);
     }
 
@@ -1047,10 +999,9 @@
         font-size: 1.4rem;
     }
 
-    /* --- Barra superior: logo | tema | ajustes | ingresar, y debajo el usuario --- */
+    
     .navbar {
-        /* backdrop-filter convertiría al navbar en el "contenedor" de la barra
-         * inferior fija y la dejaría pegada arriba: se desactiva en móvil. */
+        
         backdrop-filter: none;
     }
 
@@ -1072,7 +1023,7 @@
     }
 
     .nav-actions {
-        display: contents; /* sus hijos se colocan directamente en la cuadrícula del navbar */
+        display: contents; 
     }
 
     #themeToggleBtn { grid-area: theme; }
@@ -1112,7 +1063,7 @@
         font-size: 0.82rem;
     }
 
-    /* --- Barra de pestañas inferior --- */
+    
     .nav-links {
         position: fixed;
         left: 0;
@@ -1120,7 +1071,7 @@
         bottom: 0;
         z-index: 110;
         display: grid;
-        /* una columna por pestaña visible: 4 (estudiante), 3 (tutor / sin sesión) */
+        
         grid-auto-flow: column;
         grid-auto-columns: minmax(0, 1fr);
         gap: 0.15rem;
@@ -1150,7 +1101,7 @@
     }
 
     .nav-label-extra {
-        display: none; /* "Solicitar Tutoría" → "Solicitar", "Mis Solicitudes" → "Solicitudes" */
+        display: none; 
     }
 
     .nav-label {
@@ -1160,7 +1111,7 @@
         white-space: nowrap;
     }
 
-    /* --- Estadísticas: siempre 3 en una fila --- */
+    
     .hero-stats-bar {
         display: grid;
         grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1183,7 +1134,7 @@
         letter-spacing: 0.02em;
     }
 
-    /* --- Encabezado de sección: título arriba, buscador a todo el ancho --- */
+    
     .section-header {
         align-items: stretch;
     }
@@ -1193,7 +1144,7 @@
         width: 100%;
     }
 
-    /* --- Tarjetas: 2 columnas en tablet vertical (auto-fill), 1 en móvil --- */
+    
     .grid-cards,
     .requests-list {
         gap: 1rem;
@@ -1214,7 +1165,7 @@
         padding: 1.25rem;
     }
 
-    /* --- Zona táctil ≥ 44 px --- */
+    
     .btn-primary,
     .btn-secondary,
     .btn-danger,
@@ -1231,7 +1182,7 @@
         display: inline-flex;
         align-items: center;
         min-height: 40px;
-        margin: -0.6rem 0;    /* área táctil grande sin agrandar el pie de la tarjeta */
+        margin: -0.6rem 0;    
         padding: 0.6rem 0.25rem 0.6rem 0;
     }
 
@@ -1269,7 +1220,7 @@
         right: 0.1rem;
     }
 
-    /* 16 px en los campos: por debajo, WebView/Safari hacen zoom al enfocarlos */
+    
     .form-group input,
     .form-group select,
     .form-group textarea,
@@ -1295,7 +1246,7 @@
         min-height: 44px;
     }
 
-    /* --- Avisos (toast): pastilla compacta y centrada, justo sobre la barra inferior --- */
+    
     .toast-container {
         left: max(0.75rem, var(--safe-left));
         right: max(0.75rem, var(--safe-right));
@@ -1310,8 +1261,7 @@
         font-size: 0.8rem;
     }
 
-    /* Teclado abierto (main.js pone `kb-open` en <html>): la barra inferior estorba,
-     * porque Android encoge el WebView y la subiría encima del teclado. */
+    
     html.kb-open .nav-links {
         display: none;
     }
@@ -1324,13 +1274,13 @@
         bottom: 0.75rem;
     }
 
-    /* Los modales dejan sitio a la barra de estado */
+    
     .modal-content {
         max-height: min(90dvh, 100%);
     }
 }
 
-/* ---------- Móvil (≤ 480 px) ---------- */
+
 @media (max-width: 480px) {
     .request-actions {
         grid-template-columns: 1fr;
@@ -1341,7 +1291,7 @@
         gap: 0;
     }
 
-    /* Modales como "hoja" que sube desde abajo, como en una app nativa */
+    
     .modal {
         align-items: flex-end;
         padding: max(0.5rem, var(--safe-top)) 0 0;
@@ -1383,7 +1333,7 @@
     to { transform: translateY(0); opacity: 1; }
 }
 
-/* ---------- Móvil pequeño (≤ 360 px: 320–360 px de ancho) ---------- */
+
 @media (max-width: 360px) {
     .container {
         padding-left: max(0.75rem, var(--safe-left));
@@ -1429,7 +1379,7 @@
     }
 }
 
-/* ---------- Móvil horizontal (poco alto): barra inferior compacta ---------- */
+
 @media (max-width: 950px) and (max-height: 480px) and (orientation: landscape) {
     :root {
         --bottom-nav-h: 48px;
@@ -1452,14 +1402,14 @@
     }
 
     .nav-label-extra {
-        display: inline; /* hay ancho de sobra en horizontal */
+        display: inline; 
     }
 
     .hero-stats-bar {
         padding: 0.6rem 0.5rem;
     }
 
-    /* Una sola fila en la barra superior: logo | usuario | tema | ajustes | ingresar */
+    
     .navbar-container {
         grid-template-columns: auto minmax(0, 1fr) auto auto auto;
         grid-template-areas: "logo user theme settings auth";
@@ -1489,7 +1439,7 @@
     }
 }
 
-/* Casillas de materias (registro de tutor): sin el padding/alto de los campos de texto */
+
 .subject-checkbox input[type="checkbox"] {
     flex: 0 0 auto;
     width: 18px;

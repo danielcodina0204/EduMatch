@@ -1,9 +1,3 @@
-// main.js — Arranque de la app, navegación, modal, tema, sesión y utilidades de UI
-
-// Dos "versiones" con el mismo código: web (navegador) y app (Capacitor Android).
-// Dentro de la app se añade la clase `is-app` al <html>; el CSS la usa para el
-// comportamiento propio de una app (sin selección de texto ni rebote de scroll).
-// Para probarlo en el navegador basta con abrir la página con `?app=1`.
 (function markNativeApp() {
     const cap = window.Capacitor;
     const isNative = !!(cap && (typeof cap.isNativePlatform === 'function'
@@ -14,11 +8,10 @@
 
 document.addEventListener('DOMContentLoaded', async () => {
     if (!localStorage.getItem(STORAGE_KEYS.SUBJECTS)) {
-        saveData(STORAGE_KEYS.SUBJECTS, initialSubjects);
+        localStorage.setItem(STORAGE_KEYS.SUBJECTS, JSON.stringify(initialSubjects));
     }
 
     initTheme();
-    normalizeStoredRequests();
     selectRole(ROLES.STUDENT);
     renderSubjects();
     renderTutors();
@@ -57,6 +50,9 @@ function handleDelegatedClick(event) {
         case 'request-subject':
             quickSelectSubject(target.dataset.subject);
             break;
+        case 'view-tutor-subject-requests':
+            viewTutorSubjectRequests(target.dataset.subject);
+            break;
         case 'select-tutor':
             selectTutorForRequest(target.dataset.tutor);
             break;
@@ -64,8 +60,6 @@ function handleDelegatedClick(event) {
             acceptRequest(id);
             break;
         case 'reject-request':
-            // Rechazar es irreversible: primero se pide confirmación. "Cancelar"
-            // en ese diálogo solo lo cierra y no toca la solicitud.
             openConfirmModal({
                 title: '¿Deseas rechazar esta solicitud?',
                 message: 'Se buscará automáticamente otro tutor que dicte esta materia y se le asignará la solicitud. Si no hay ninguno disponible, la solicitud se cancelará.',
@@ -109,7 +103,6 @@ function handleDelegatedClick(event) {
             resolveConfirmModal(false);
             break;
         case 'confirm-dismiss-backdrop':
-            // Solo cuenta el clic sobre el fondo, no sobre el contenido del diálogo.
             if (event.target === target) resolveConfirmModal(false);
             break;
         case 'assign-new-tutor': {
@@ -131,6 +124,15 @@ function handleDelegatedClick(event) {
         case 'remove-tutor-subject':
             removeSubjectFromTutor(tutorId, target.dataset.subject);
             break;
+        case 'delete-custom-subject':
+            openConfirmModal({
+                title: '¿Deseas eliminar la materia definitivamente?',
+                message: `"${target.dataset.subject}" se quitará del catálogo y de tu perfil.`,
+                confirmLabel: 'Eliminar',
+                cancelLabel: 'Cancelar',
+                onConfirm: () => scheduleCustomSubjectDeletion(tutorId, target.dataset.subject)
+            });
+            break;
         case 'create-subject': {
             const nameInput = document.getElementById(`newSubjectName-${tutorId}`);
             const descInput = document.getElementById(`newSubjectDesc-${tutorId}`);
@@ -146,10 +148,6 @@ function handleDelegatedClick(event) {
     }
 }
 
-// ---------- Navegación por pestañas ----------
-// switchTab no confía solo en la UI: aunque alguien la invoque directamente
-// desde la consola, una pestaña con contenido privado (p. ej. "request" para
-// un Tutor) se redirige a una pestaña permitida en vez de exponer el flujo.
 function switchTab(tabId) {
     const currentUser = getCurrentUser();
 
@@ -169,20 +167,27 @@ function switchTab(tabId) {
     window.scrollTo(0, 0); // al cambiar de pestaña se empieza arriba (comportamiento de app)
 }
 
-// ---------- Interfaz dependiente del rol ----------
-// Único punto que decide qué ve cada rol (sin sesión / Estudiante / Tutor):
-// qué botones del navbar aparecen y si "Solicitar Tutoría" muestra el
-// formulario operativo o un aviso de acceso restringido. Se llama siempre
-// que cambia la sesión (updateUserSession) para que nunca queden botones
-// "fantasma" ni el formulario visible para quien no debe usarlo.
 function applyRoleBasedUI() {
     const currentUser = getCurrentUser();
     const role = currentUser ? currentUser.role : null;
 
+    const navTutors = document.querySelector('.nav-btn[data-tab="tutors"]');
     const navRequest = document.querySelector('.nav-btn[data-tab="request"]');
     const navHistory = document.querySelector('.nav-btn[data-tab="history"]');
+    if (navTutors) {
+        navTutors.style.display = '';
+        const navLabel = navTutors.querySelector('.nav-label');
+        if (navLabel) navLabel.textContent = role === ROLES.TUTOR ? 'Mi perfil' : 'Tutores';
+    }
     if (navRequest) navRequest.style.display = role === ROLES.TUTOR ? 'none' : '';
     if (navHistory) navHistory.style.display = currentUser ? '' : 'none';
+
+    const exploreTitle = document.querySelector('#explore-tab .section-header h2');
+    if (exploreTitle) exploreTitle.textContent = role === ROLES.TUTOR ? 'Mis materias a cargo' : 'Materias Disponibles';
+    const tutorsTab = document.getElementById('tutors-tab');
+    const tutorsTitle = tutorsTab?.querySelector('.section-header h2');
+    if (tutorsTitle) tutorsTitle.textContent = role === ROLES.TUTOR ? 'Mi perfil de tutor' : 'Tutores Disponibles';
+    if (tutorsTab) tutorsTab.style.display = '';
 
     const form = document.getElementById('tutorRequestForm');
     const locked = document.getElementById('requestLocked');
@@ -208,18 +213,12 @@ function applyRoleBasedUI() {
         }
     }
 
-    // Si la pestaña activa deja de tener sentido para el nuevo rol (p. ej. un
-    // Tutor inicia sesión mientras "Solicitar Tutoría" estaba abierta), se
-    // redirige a una pestaña pública en lugar de dejarla abierta a medias.
     const activeTab = document.querySelector('.tab-content.active');
     if (activeTab && activeTab.id === 'request-tab' && role === ROLES.TUTOR) {
         switchTab('explore');
     }
 }
 
-// ---------- Mostrar / ocultar contraseña ----------
-// Íconos SVG "clásicos" (outline, currentColor) en vez de emoji: se ven
-// consistentes entre sistemas operativos y heredan el color del tema.
 const PASSWORD_EYE_ICON = `
     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"></path>
@@ -245,9 +244,6 @@ function togglePasswordVisibility(inputId, btn) {
     }
 }
 
-/** Vuelve a ocultar la contraseña y restaura el ícono del ojito después de
- * limpiar un formulario (registro/login), para no dejarla visible de una
- * sesión de captura a la siguiente. */
 function resetPasswordVisibility(...inputIds) {
     inputIds.forEach(id => {
         const input = document.getElementById(id);
@@ -261,7 +257,6 @@ function resetPasswordVisibility(...inputIds) {
     });
 }
 
-// ---------- Modales ----------
 function openModal(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) modal.classList.add('active');
@@ -272,22 +267,23 @@ function closeModal(modalId) {
     if (modal) modal.classList.remove('active');
 }
 
-// ---------- Modal de confirmación reutilizable ----------
-// Regla: "Cancelar" (o la X, o clic fuera, o Escape) SOLO cierra el diálogo y
-// nunca ejecuta ni modifica nada; la acción real vive únicamente en onConfirm.
 let pendingConfirmAction = null;
+let pendingConfirmCancel = null;
 
-function openConfirmModal({ title, message, confirmLabel, onConfirm }) {
+function openConfirmModal({ title, message, confirmLabel, cancelLabel, onConfirm, onCancel }) {
     pendingConfirmAction = typeof onConfirm === 'function' ? onConfirm : null;
+    pendingConfirmCancel = typeof onCancel === 'function' ? onCancel : null;
     document.getElementById('confirmModalTitle').textContent = title;
     document.getElementById('confirmModalMessage').textContent = message;
     document.getElementById('confirmModalAccept').textContent = confirmLabel || 'Confirmar';
+    document.getElementById('confirmModalCancel').textContent = cancelLabel || 'Cancelar';
     openModal('confirmModal');
 }
 
 function resolveConfirmModal(confirmed) {
-    const action = confirmed ? pendingConfirmAction : null;
+    const action = confirmed ? pendingConfirmAction : pendingConfirmCancel;
     pendingConfirmAction = null;
+    pendingConfirmCancel = null;
     closeModal('confirmModal');
     if (action) action();
 }
@@ -297,14 +293,6 @@ document.addEventListener('keydown', event => {
     if (event.key === 'Escape' && modal && modal.classList.contains('active')) resolveConfirmModal(false);
 });
 
-// ---------- Botón "atrás" de Android (Capacitor) ----------
-// Orden de prioridad, como en una app nativa:
-//   1. Si hay un modal abierto, lo cierra (el de arriba primero). En Configuración,
-//      si está la pantalla de "¿Eliminar todos los datos?", solo vuelve un paso atrás.
-//      El aviso de confirmación se trata como "Cancelar": no cambia nada.
-//   2. Si no hay modales y estás en otra pestaña, vuelve a "Materias".
-//   3. Si ya estás en "Materias" sin modales, no hay nada que retroceder: devuelve
-//      false y la app se cierra.
 function handleBackNavigation() {
     if (window.UIPickers && window.UIPickers.hasOpenPanel()) { window.UIPickers.closeOpen(); return true; } // lista / calendario / reloj abierto
     const isOpen = id => { const el = document.getElementById(id); return !!(el && el.classList.contains('active')); };
@@ -324,11 +312,6 @@ function handleBackNavigation() {
     return false;
 }
 
-// ---------- Teclado en pantalla (móvil / app) ----------
-// Android encoge el WebView al abrir el teclado. Se detecta comparando el alto visible
-// con el mayor alto visto (con un campo de texto enfocado) y se marca <html> con
-// `kb-open`: el CSS oculta entonces la barra inferior. Al enfocar un campo se
-// desplaza hasta el centro para que el teclado no lo tape.
 (function setupKeyboardWatcher() {
     const TEXT_TYPES = ['text', 'email', 'password', 'search', 'tel', 'url', 'number', 'date', 'time', ''];
     const isTextField = el => !!el && (el.tagName === 'TEXTAREA' || (el.tagName === 'INPUT' && TEXT_TYPES.includes(el.type)));
@@ -359,16 +342,9 @@ function handleBackNavigation() {
     baseHeight = currentHeight();
 })();
 
-// ---------- Puente con Capacitor (sin bundler) ----------
-// Este proyecto no usa webpack/vite, así que los módulos JS de los plugins
-// (`import { App } from '@capacitor/app'`) no existen y `Capacitor.Plugins.App`
-// queda sin definir. Lo que SÍ inyecta Android en la página es el puente nativo de
-// bajo nivel (`Capacitor.addListener` / `Capacitor.nativePromise`), que es lo que se
-// usa aquí. Si algún día se añade un bundler y `Capacitor.Plugins.X` existe, se usa.
 const NativeBridge = {
     get cap() { return window.Capacitor || null; },
 
-    /** Escucha un evento de un plugin nativo (p. ej. App → backButton). */
     listen(plugin, eventName, callback) {
         const cap = this.cap;
         if (!cap) return false;
@@ -381,7 +357,6 @@ const NativeBridge = {
         } catch (err) { console.warn(`[Capacitor] ${plugin}.${eventName}:`, err); return false; }
     },
 
-    /** Llama a un método de un plugin nativo; nunca lanza (en la web no hace nada). */
     call(plugin, method, options = {}) {
         const cap = this.cap;
         if (!cap) return Promise.resolve(null);
@@ -394,18 +369,12 @@ const NativeBridge = {
     }
 };
 
-/** Conecta handleBackNavigation con el botón atrás de Android (plugin @capacitor/app).
- * En el navegador no hace nada. Al registrar este listener, Android deja de cerrar la
- * app por su cuenta: aquí se decide qué hacer (ver handleBackNavigation). */
 function setupAndroidBackButton() {
     NativeBridge.listen('App', 'backButton', () => {
         if (!handleBackNavigation()) NativeBridge.call('App', 'exitApp');
     });
 }
 
-// ---------- Tema claro / oscuro ----------
-/** Aplica el tema en <html> y <body> (así el fondo del documento, el "rebote" de
- * scroll y los controles nativos también lo siguen) y colorea la barra de estado. */
 function applyTheme(theme) {
     document.documentElement.setAttribute('data-theme', theme);
     document.body.setAttribute('data-theme', theme);
@@ -413,8 +382,6 @@ function applyTheme(theme) {
     if (btn) btn.textContent = theme === 'dark' ? '☀️' : '🌙';
     const meta = document.getElementById('metaThemeColor');
     if (meta) meta.setAttribute('content', theme === 'dark' ? '#202124' : '#ffffff');
-    // Android: iconos de la barra de estado/gestos oscuros sobre fondo claro y claros
-    // sobre fondo oscuro. Sigue el tema DE LA APP (no el del sistema).
     NativeBridge.call('SystemBars', 'setStyle', { style: theme === 'dark' ? 'DARK' : 'LIGHT' });
 }
 
@@ -428,20 +395,13 @@ function initTheme() {
     applyTheme(localStorage.getItem(STORAGE_KEYS.THEME) || 'light');
 }
 
-// ---------- Notificaciones Toast ----------
-// Además del uso simple showToast(msg, type), admite una acción opcional
-// (por ejemplo "Deshacer") para reemplazar los window.confirm()/alert()
-// nativos del navegador, que se ven fuera de lugar en la interfaz de la app.
-// Duración de los avisos: cortos, para que no estorben. El aviso con botón (p. ej.
-// "Deshacer") dura un poco más porque hay que tener tiempo de tocarlo.
-const TOAST_MS = { info: 2500, success: 2500, error: 3000, action: 4000 };
+const TOAST_MS = { info: 2500, success: 2500, error: 3000, action: 5000 };
 const TOAST_MAX_VISIBLE = 2;
 
 function showToast(message, type = 'info', options = {}) {
     const container = document.getElementById('toastContainer');
     if (!container) return null;
 
-    // Como mucho 2 a la vez: el más viejo se retira para no apilar avisos.
     const visible = [...container.querySelectorAll('.toast:not(.is-leaving)')];
     while (visible.length >= TOAST_MAX_VISIBLE) visible.shift().dispatchEvent(new CustomEvent('toast:dismiss'));
 
@@ -481,7 +441,6 @@ function showToast(message, type = 'info', options = {}) {
 
     container.appendChild(toast);
 
-    // Nunca más largo que el máximo de su tipo (aunque el que llama pida más).
     const max = hasAction ? TOAST_MS.action : (TOAST_MS[type] || TOAST_MS.info);
     const duration = Math.min(options.duration || max, max);
     timer = setTimeout(() => {
@@ -495,22 +454,33 @@ function showToast(message, type = 'info', options = {}) {
     return { dismiss: () => { clearTimeout(timer); removeToast(); } };
 }
 
-// ---------- Estadísticas ----------
 function updateStats() {
     const subjects = getSubjects();
     const users = getStoredData(STORAGE_KEYS.USERS, []);
     const requests = getStoredData(STORAGE_KEYS.REQUESTS, []);
+    const currentUser = getCurrentUser();
 
     const statSubjects = document.getElementById('statSubjects');
     const statTutors = document.getElementById('statTutors');
     const statRequests = document.getElementById('statRequests');
 
-    if (statSubjects) statSubjects.textContent = subjects.length;
-    if (statTutors) statTutors.textContent = users.filter(u => u.role === ROLES.TUTOR).length;
-    if (statRequests) statRequests.textContent = requests.length;
+    if (statSubjects) {
+        statSubjects.textContent = currentUser?.role === ROLES.TUTOR
+            ? (currentUser.subjects || []).length
+            : subjects.length;
+    }
+    if (statTutors) {
+        statTutors.textContent = currentUser?.role === ROLES.TUTOR
+            ? '1'
+            : users.filter(u => u.role === ROLES.TUTOR).length;
+    }
+    if (statRequests) {
+        statRequests.textContent = currentUser
+            ? requests.filter(r => r.studentId === currentUser.id || r.tutorId === currentUser.id).length
+            : 0;
+    }
 }
 
-// ---------- Sesión ----------
 function updateUserSession() {
     const currentUser = getCurrentUser();
     const userInfo = document.getElementById('userInfo');
@@ -530,11 +500,6 @@ function updateUserSession() {
     applyRoleBasedUI();
 }
 
-// ---------- Panel de Configuración: reinicio de datos de prueba ----------
-// Separado a propósito de las funciones normales de estudiante/tutor: vive en
-// su propio modal, requiere una confirmación explícita y una cuenta regresiva
-// antes de habilitar el botón definitivo, para que un clic accidental nunca
-// borre datos.
 let resetCountdownInterval = null;
 let resetCountdownRemaining = 0;
 
@@ -594,10 +559,6 @@ function cancelResetConfirmation() {
     resetSettingsModalView();
 }
 
-/** Borra únicamente los datos de prueba persistidos (cuentas, perfiles,
- * materias agregadas por tutores, solicitudes, valoraciones, sesión) y
- * restaura el catálogo de materias predefinidas. Nunca toca archivos del
- * proyecto ni la preferencia de tema, que no son "datos de prueba". */
 function confirmResetAllData() {
     const confirmBtn = document.getElementById('resetConfirmBtn');
     if (confirmBtn && confirmBtn.disabled) return; // La cuenta regresiva sigue activa: no hacer nada.
@@ -608,11 +569,10 @@ function confirmResetAllData() {
     localStorage.removeItem(STORAGE_KEYS.USERS);
     localStorage.removeItem(STORAGE_KEYS.REQUESTS);
     localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
-    saveData(STORAGE_KEYS.SUBJECTS, initialSubjects);
+    localStorage.setItem(STORAGE_KEYS.SUBJECTS, JSON.stringify(initialSubjects));
 
-    // Limpia también estado de UI en memoria (deshacer pendientes, formularios
-    // de propuesta abiertos) para que no queden referencias a datos borrados.
     pendingTutorDeletion = null;
+    pendingSubjectDeletion = null;
     openProposalForms.clear();
 
     resetSettingsModalView();
@@ -624,17 +584,13 @@ function confirmResetAllData() {
     renderSubjects();
     refreshAfterAuthChange();
     updateStats();
+    window.EduMatchBackend?.hydrate?.();
 }
 
 function setDefaultPreferredDate() {
     const dateInput = document.getElementById('preferredDate');
     if (!dateInput) return;
     dateInput.min = todayIsoDate();
-    // Ojo: NO usar `dateInput.valueAsDate = someDate`. Ese setter interpreta el
-    // Date como UTC, así que en zonas horarias detrás de UTC (como la nuestra)
-    // puede mostrar un día distinto al esperado ("seleccioné 22/09 y aparece
-    // 21/09"). Se arma la cadena "YYYY-MM-DD" a mano, en horario local, igual
-    // que hace todayIsoDate().
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     const pad = n => String(n).padStart(2, '0');

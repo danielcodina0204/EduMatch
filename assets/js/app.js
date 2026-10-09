@@ -1,16 +1,12 @@
-// app.js — Lógica de negocio: materias, tutores, solicitudes y valoraciones.
-// Las validaciones de rol en la interfaz complementan las políticas RLS del backend.
+let pendingTutorDeletion = null;
+let pendingSubjectDeletion = null;
 
-// ---------- Materias: catálogo compartido ----------
-// Eliminación de perfil de tutor "con deshacer": desaparece de la vista de
-// inmediato pero el borrado real en localStorage no se confirma hasta que pasa
-// el margen de tiempo del toast, sin usar window.confirm() (se ve como un
-// aviso nativo del navegador, fuera de estilo con el resto de la interfaz).
-let pendingTutorDeletion = null; // { tutorId }
-
-// APP-03: Consulta de materias (catálogo + búsqueda en renderSubjects/filterSubjects).
 function getSubjects() {
     return getStoredData(STORAGE_KEYS.SUBJECTS, initialSubjects);
+}
+
+function isSubjectPendingDeletion(name) {
+    return !!(pendingSubjectDeletion && name && pendingSubjectDeletion.subjectName.toLowerCase() === name.toLowerCase());
 }
 
 function findSubjectByName(name) {
@@ -18,7 +14,11 @@ function findSubjectByName(name) {
 }
 
 function renderSubjects(filterText = '') {
-    const subjects = getSubjects();
+    const allSubjects = getSubjects().filter(subject => !isSubjectPendingDeletion(subject.name));
+    const currentUser = getCurrentUser();
+    const subjects = currentUser?.role === ROLES.TUTOR
+        ? allSubjects.filter(subject => (currentUser.subjects || []).includes(subject.name))
+        : allSubjects;
     const grid = document.getElementById('subjectsGrid');
     const select = document.getElementById('selectSubject');
     const previousValue = select.value;
@@ -31,8 +31,12 @@ function renderSubjects(filterText = '') {
         s.category.toLowerCase().includes(filterText.toLowerCase())
     );
 
+    const emptyMessage = currentUser?.role === ROLES.TUTOR && subjects.length === 0
+        ? 'Aún no tienes materias asignadas. Agrégalas desde tu perfil de tutor.'
+        : `No se encontraron materias que coincidan con "${escapeHtml(filterText)}".`;
+
     grid.innerHTML = filtered.length === 0
-        ? `<p class="empty-state">No se encontraron materias que coincidan con "${escapeHtml(filterText)}".</p>`
+        ? `<p class="empty-state">${emptyMessage}</p>`
         : filtered.map(subject => `
             <div class="card subject-card">
                 <div>
@@ -42,9 +46,13 @@ function renderSubjects(filterText = '') {
                     </div>
                     <p>${escapeHtml(subject.description)}</p>
                 </div>
-                <button type="button" class="btn-secondary btn-block" data-action="request-subject" data-subject="${escapeHtml(subject.name)}">
+                ${currentUser?.role === ROLES.TUTOR
+                    ? `<button type="button" class="btn-secondary btn-block" data-action="view-tutor-subject-requests" data-subject="${escapeHtml(subject.name)}">
+                    Ver tutorías
+                </button>`
+                    : `<button type="button" class="btn-secondary btn-block" data-action="request-subject" data-subject="${escapeHtml(subject.name)}">
                     Solicitar Tutoría
-                </button>
+                </button>`}
             </div>`).join('');
 
     subjects.forEach(subject => {
@@ -63,12 +71,9 @@ function filterSubjects() {
 function quickSelectSubject(subjectName) {
     switchTab('request');
     document.getElementById('selectSubject').value = subjectName;
-    // Cambiar la materia puede invalidar al tutor que ya estuviera elegido,
-    // así que se vuelve a filtrar/revalidar el select de tutor.
     updateTutorSelectForSubject();
 }
 
-/** Lista de checkboxes de materias usada al registrarse como tutor. */
 function renderSubjectCheckboxList(preselected = []) {
     const container = document.getElementById('regSubjectsList');
     if (!container) return;
@@ -80,84 +85,107 @@ function renderSubjectCheckboxList(preselected = []) {
         </label>`).join('');
 }
 
-/**
- * Permite a un TUTOR crear una materia nueva en el catálogo compartido.
- * Solo la crea: para ofrecerla, el propio tutor la asigna después con el
- * flujo ya existente (select "Agregar materia existente" -> assignSubjectToTutor),
- * igual que con cualquier materia predefinida.
- */
-function createSubject(tutorId, rawName, rawDescription) {
+async function createSubject(tutorId, rawName, rawDescription) {
     const currentUser = getCurrentUser();
     if (!currentUser || currentUser.role !== ROLES.TUTOR || currentUser.id !== tutorId) {
         showToast('Solo un tutor puede crear materias nuevas.', 'error');
-        return;
+        return false;
     }
 
-    // Normaliza espacios (colapsa múltiples espacios y recorta extremos) antes de validar.
     const name = (rawName || '').trim().replace(/\s+/g, ' ');
     if (!name) {
         showToast('Escribe un nombre para la nueva materia.', 'error');
-        return;
+        return false;
     }
-    if (findSubjectByName(name)) {
-        showToast('Ya existe una materia con ese nombre.', 'error');
-        return;
+
+    const existingLocal = findSubjectByName(name);
+    if (existingLocal && (currentUser.subjects || []).some(s => s.toLowerCase() === existingLocal.name.toLowerCase())) {
+        showToast('Ya tienes esa materia asignada.', 'error');
+        return false;
     }
 
     const description = (rawDescription || '').trim().replace(/\s+/g, ' ') || 'Materia agregada por un tutor.';
+    let createdSubject = null;
 
-    const subjects = getSubjects();
-    const newId = subjects.reduce((max, s) => Math.max(max, s.id), 0) + 1;
-    subjects.push({ id: newId, name, category: 'Personalizada', description });
-    saveData(STORAGE_KEYS.SUBJECTS, subjects);
+    try {
+        if (window.EduMatchBackend?.isEnabled?.() && window.EduMatchBackend?.createTutorSubject) {
+            createdSubject = await window.EduMatchBackend.createTutorSubject(tutorId, {
+                name,
+                description,
+                category: 'Personalizada'
+            });
+        } else {
+            const subjects = getSubjects();
+            const newId = subjects.reduce((max, subject) => Math.max(max, Number(subject.id) || 0), 0) + 1;
+            createdSubject = { id: newId, name, category: 'Personalizada', description, createdBy: currentUser.id };
+        }
+    } catch (error) {
+        console.error('Error creando materia:', error);
+        showToast(error?.message || 'No se pudo guardar la materia. Comprueba la conexión e inténtalo nuevamente.', 'error');
+        return false;
+    }
 
-    showToast(`Materia "${name}" creada. Ahora puedes asignártela desde tu tarjeta.`, 'success');
+    if (!createdSubject) {
+        showToast('No se pudo crear la materia.', 'error');
+        return false;
+    }
 
-    // Refresca todo lo que depende del catálogo: grid de materias, selects del
-    // formulario de solicitud, y el select "Agregar materia existente" del tutor.
+    const subjects = getSubjects().filter(subject => subject.name.toLowerCase() !== createdSubject.name.toLowerCase());
+    subjects.push({
+        id: Number(createdSubject.id),
+        name: createdSubject.name,
+        category: createdSubject.category || 'Personalizada',
+        description: createdSubject.description || description,
+        createdBy: createdSubject.createdBy || currentUser.id
+    });
+
+    currentUser.subjects = [...new Set([...(currentUser.subjects || []), createdSubject.name])];
+    const users = getStoredData(STORAGE_KEYS.USERS, []);
+    const owner = users.find(u => u.id === currentUser.id);
+    if (owner) owner.subjects = currentUser.subjects.slice();
+
+    try {
+        localStorage.setItem(STORAGE_KEYS.SUBJECTS, JSON.stringify(subjects));
+        localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
+        setCurrentUser(currentUser);
+    } catch (error) {
+        console.error('Error actualizando el estado local después de crear la materia:', error);
+        showToast('La materia se guardó en Supabase, pero no se pudo actualizar la vista local.', 'error');
+        return false;
+    }
+
+    showToast(createdSubject.alreadyExisted
+        ? `La materia "${createdSubject.name}" ya existía en el catálogo y se asignó a tu perfil.`
+        : `Materia "${createdSubject.name}" creada y asignada a tu perfil.`, 'success');
     filterSubjects();
     renderTutors();
     updateStats();
+    return true;
 }
 
-// ---------- Tutores ----------
-// APP-05: Consulta de tutores disponibles (getTutors/renderTutors/renderTutorCard).
 function getTutors() {
     return getStoredData(STORAGE_KEYS.USERS, [])
         .filter(u => u.role === ROLES.TUTOR && u.id !== (pendingTutorDeletion && pendingTutorDeletion.tutorId));
 }
 
 function renderTutors() {
-    const tutors = getTutors();
     const grid = document.getElementById('tutorsGrid');
     if (!grid) return;
 
     const currentUser = getCurrentUser();
+    const isTutor = currentUser?.role === ROLES.TUTOR;
 
-    // El propio tutor va primero: su tarjeta (con la gestión de materias) ocupa
-    // todo el ancho y así no estira ni deforma las tarjetas de los demás.
-    const isOwn = t => !!(currentUser && currentUser.role === ROLES.TUTOR && currentUser.id === t.id);
-    const ordered = tutors.slice().sort((a, b) => Number(isOwn(b)) - Number(isOwn(a)));
+    const tutors = isTutor
+        ? getTutors().filter(t => t.id === currentUser.id)
+        : getTutors();
 
-    grid.innerHTML = ordered.length === 0
-        ? `<p class="empty-state">Todavía no hay tutores registrados. ¡Sé el primero en registrarte como tutor!</p>`
-        : ordered.map(tutor => renderTutorCard(tutor, currentUser)).join('');
+    grid.innerHTML = tutors.length === 0
+        ? `<p class="empty-state">Todavía no hay tutores registrados.</p>`
+        : tutors.map(tutor => renderTutorCard(tutor, currentUser)).join('');
 
-    // El select de "Tutor preferido" del formulario de solicitud depende de la
-    // materia elegida (relación válida TUTOR + MATERIA), así que se delega su
-    // construcción a updateTutorSelectForSubject en vez de listar aquí a todos
-    // los tutores sin filtrar.
     updateTutorSelectForSubject();
 }
 
-/**
- * Reconstruye el select "Tutor preferido" mostrando SOLO tutores que tengan
- * asignada la materia actualmente elegida en el formulario (relación válida
- * TUTOR + MATERIA, ver auditoría de bug crítico). Si no hay materia elegida
- * todavía, se listan todos los tutores (aún no hay nada que filtrar).
- * Si el tutor que estaba seleccionado deja de ser compatible (porque cambió
- * la materia o el tutor perdió esa materia), se revalida y se limpia con aviso.
- */
 function updateTutorSelectForSubject() {
     const subjectSelect = document.getElementById('selectSubject');
     const tutorSelect = document.getElementById('selectTutor');
@@ -191,7 +219,6 @@ function updateTutorSelectForSubject() {
     renderTutorAvailabilityHint(subjectName, compatibleTutors.length);
 }
 
-/** Mensaje bajo el select cuando la materia elegida no tiene tutores compatibles. */
 function renderTutorAvailabilityHint(subjectName, compatibleCount) {
     const hint = document.getElementById('tutorAvailabilityHint');
     if (!hint) return;
@@ -204,21 +231,18 @@ function renderTutorAvailabilityHint(subjectName, compatibleCount) {
     }
 }
 
-/** Tarjeta de tutor. TODAS las tarjetas comparten la misma estructura:
- *   .tutor-card__body    -> nombre + etiqueta, correo, materias
- *   .tutor-card__actions -> botón(es), siempre anclados al fondo de la tarjeta
- * La tarjeta del propio tutor añade además .tutor-card__manage (gestión de
- * materias y perfil) y es la única variante (.tutor-card--own). */
 function renderTutorCard(tutor, currentUser) {
     const isOwner = !!(currentUser && currentUser.role === ROLES.TUTOR && currentUser.id === tutor.id);
-    const subjects = tutor.subjects || [];
-    const unassigned = getSubjects().filter(s => !subjects.includes(s.name));
+    const isStudentView = currentUser?.role === ROLES.STUDENT;
+    const subjects = (tutor.subjects || []).filter(name => !isSubjectPendingDeletion(name));
+    const unassigned = getSubjects().filter(s => !isSubjectPendingDeletion(s.name)).filter(s => !subjects.some(name => name.toLowerCase() === s.name.toLowerCase()));
 
     const tags = subjects.length
-        ? subjects.map(s => `
+        ? subjects.map(subjectName => `
             <span class="badge tutor-tag">
-                <span class="tutor-tag__text">${escapeHtml(s)}</span>
-                ${isOwner ? `<button type="button" class="tag-remove" data-action="remove-tutor-subject" data-tutor-id="${tutor.id}" data-subject="${escapeHtml(s)}" title="Quitar materia" aria-label="Quitar ${escapeHtml(s)}">&times;</button>` : ''}
+                <span class="tutor-tag__text">${escapeHtml(subjectName)}</span>
+                ${isOwner ? `<button type="button" class="tag-remove" data-action="remove-tutor-subject" data-tutor-id="${tutor.id}" data-subject="${escapeHtml(subjectName)}" title="Quitar materia de mi perfil" aria-label="Quitar ${escapeHtml(subjectName)}">&times;</button>` : ''}
+                ${isOwner && getSubjects().some(s => s.name.toLowerCase() === subjectName.toLowerCase() && s.createdBy === tutor.id) ? `<button type="button" class="tag-remove" data-action="delete-custom-subject" data-tutor-id="${tutor.id}" data-subject="${escapeHtml(subjectName)}" title="Eliminar materia personalizada" aria-label="Eliminar ${escapeHtml(subjectName)} de la base de datos">🗑</button>` : ''}
             </span>`).join('')
         : `<span class="tutor-card__empty">Sin materias asignadas todavía.</span>`;
 
@@ -227,13 +251,13 @@ function renderTutorCard(tutor, currentUser) {
             <div class="tutor-manage-group">
                 <select id="addSubjectSelect-${tutor.id}" aria-label="Materia existente para agregar">
                     <option value="">Agregar materia existente...</option>
-                    ${unassigned.map(s => `<option value="${escapeHtml(s.name)}">${escapeHtml(s.name)}</option>`).join('')}
+                    ${unassigned.map(subject => `<option value="${escapeHtml(subject.name)}">${escapeHtml(subject.name)}</option>`).join('')}
                 </select>
                 <button type="button" class="btn-secondary btn-block" data-action="assign-tutor-subject" data-tutor-id="${tutor.id}">Agregar materia</button>
             </div>
 
             <div class="tutor-manage-group">
-                <p class="tutor-manage-label">¿No encuentras tu materia? Crea una nueva y luego agrégala arriba.</p>
+                <p class="tutor-manage-label">¿No encuentras tu materia? Crea una nueva y quedará asignada a tu perfil.</p>
                 <input type="text" id="newSubjectName-${tutor.id}" placeholder="Nombre de la nueva materia">
                 <textarea id="newSubjectDesc-${tutor.id}" rows="2" placeholder="Descripción (opcional)"></textarea>
                 <button type="button" class="btn-secondary btn-block" data-action="create-subject" data-tutor-id="${tutor.id}">Agregar nueva materia</button>
@@ -242,7 +266,7 @@ function renderTutorCard(tutor, currentUser) {
             <button type="button" class="btn-danger btn-block" data-action="delete-tutor" data-tutor-id="${tutor.id}">Eliminar mi perfil de tutor</button>
         </div>` : '';
 
-    const actions = !isOwner ? `
+    const actions = isStudentView ? `
         <div class="tutor-card__actions">
             <button type="button" class="btn-secondary btn-block" data-action="select-tutor" data-tutor="${escapeHtml(tutor.name)}">Solicitar con este tutor</button>
         </div>` : '';
@@ -252,9 +276,8 @@ function renderTutorCard(tutor, currentUser) {
             <div class="tutor-card__body">
                 <header class="tutor-card__header">
                     <h3 class="tutor-card__name" title="${escapeHtml(tutor.name)}">${escapeHtml(tutor.name)}</h3>
-                    <span class="badge tutor-card__badge">Tutor</span>
+                    ${!isOwner || isStudentView ? '<span class="badge tutor-card__badge">Tutor</span>' : ''}
                 </header>
-                <p class="tutor-card__email" title="${escapeHtml(tutor.email)}">${escapeHtml(tutor.email)}</p>
                 <div class="tutor-card__tags">${tags}</div>
             </div>
             ${actions}
@@ -262,49 +285,172 @@ function renderTutorCard(tutor, currentUser) {
         </article>`;
 }
 
-function assignSubjectToTutor(tutorId, subjectName) {
+function viewTutorSubjectRequests(subjectName) {
+    const currentUser = getCurrentUser();
+    if (!currentUser || currentUser.role !== ROLES.TUTOR) {
+        showToast('Esta función es exclusiva para tutores.', 'error');
+        return;
+    }
+    const activeStatuses = [REQUEST_STATUS.PENDING, REQUEST_STATUS.PROPOSED, REQUEST_STATUS.ACCEPTED];
+    const requests = getStoredData(STORAGE_KEYS.REQUESTS, []).filter(r =>
+        r && r.tutorId === currentUser.id && r.subject === subjectName && activeStatuses.includes(r.status)
+    );
+    if (!requests.length) {
+        showToast(`No hay tutorías para \"${subjectName}\" en este momento.`, 'info');
+        return;
+    }
+    switchTab('history');
+    renderRequests(subjectName);
+}
+
+async function assignSubjectToTutor(tutorId, subjectName) {
     if (!subjectName) {
         showToast('Selecciona una materia para agregar.', 'error');
-        return;
+        return false;
     }
     const currentUser = getCurrentUser();
     if (!currentUser || currentUser.role !== ROLES.TUTOR || currentUser.id !== tutorId) {
         showToast('Solo el propio tutor puede gestionar sus materias.', 'error');
-        return;
+        return false;
     }
-    if (!findSubjectByName(subjectName)) {
+    const subject = findSubjectByName(subjectName);
+    if (!subject) {
         showToast('Esa materia no existe en el catálogo.', 'error');
-        return;
+        return false;
     }
 
     const users = getStoredData(STORAGE_KEYS.USERS, []);
     const tutor = users.find(u => u.id === tutorId);
-    if (!tutor) return;
+    if (!tutor) return false;
 
     tutor.subjects = tutor.subjects || [];
-    if (tutor.subjects.includes(subjectName)) {
+    if (tutor.subjects.some(name => name.toLowerCase() === subject.name.toLowerCase())) {
         showToast('Ya tienes esa materia asignada.', 'error');
-        return;
+        return false;
     }
-    tutor.subjects.push(subjectName);
-    saveData(STORAGE_KEYS.USERS, users);
-    setCurrentUser(tutor);
-    window.EduMatchBackend?.syncTutorSubjects(tutorId);
+    tutor.subjects.push(subject.name);
+
+    const previousUsers = getStoredData(STORAGE_KEYS.USERS, []);
+    try {
+        localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
+        setCurrentUser(tutor);
+        if (window.EduMatchBackend?.isEnabled?.()) {
+            const result = await window.EduMatchBackend.assignTutorSubject(tutorId, subject.name);
+            if (result && result.ok === false) {
+                localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(previousUsers));
+                const previousUser = previousUsers.find(u => u.id === tutorId);
+                if (previousUser) setCurrentUser(previousUser);
+                renderTutors();
+                return false;
+            }
+        }
+    } catch (error) {
+        console.error('Error asignando materia al tutor:', error);
+        localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(previousUsers));
+        const previousUser = previousUsers.find(u => u.id === tutorId);
+        if (previousUser) setCurrentUser(previousUser);
+        showToast(error?.message || 'No se pudo guardar la materia del tutor.', 'error');
+        return false;
+    }
 
     showToast('Materia agregada a tu perfil.', 'success');
+    renderSubjects();
     renderTutors();
-    // Agregar una materia puede volver válida una solicitud que antes estaba
-    // bloqueada por desajuste tutor+materia: refrescar Mis Solicitudes también.
     renderRequests();
+    updateStats();
+    return true;
 }
 
-/** Quita una materia del perfil del tutor. Cualquier solicitud suya (activa)
- * para esa materia queda igual de "sin tutor válido" que si hubiera
- * eliminado el perfil entero, así que se resuelve con el MISMO resolvedor
- * (reassignOrCancel, ver rejectRequest/finalizeTutorDeletion): busca otro
- * tutor que la dicte y reasigna, o cancela si no queda ninguno. Nunca se deja
- * la solicitud abierta esperando que el estudiante elija manualmente. */
-function removeSubjectFromTutor(tutorId, subjectName) {
+function getCustomSubjectDeletionBlocker(tutorId, subjectName) {
+    const key = subjectName.toLowerCase();
+    const otherTutor = getStoredData(STORAGE_KEYS.USERS, []).some(u =>
+        u.id !== tutorId && u.role === ROLES.TUTOR && (u.subjects || []).some(s => s.toLowerCase() === key));
+    if (otherTutor) return 'No puedes eliminar esta materia porque otro tutor todavía la tiene asignada.';
+    const hasRequests = getStoredData(STORAGE_KEYS.REQUESTS, []).some(r => r && (r.subject || '').toLowerCase() === key);
+    if (hasRequests) return 'No puedes eliminar esta materia porque existen solicitudes o tutorías asociadas a ella.';
+    return null;
+}
+
+function refreshSubjectViews() {
+    renderSubjects();
+    renderTutors();
+    renderRequests();
+    updateStats();
+}
+
+function scheduleCustomSubjectDeletion(tutorId, subjectName) {
+    if (pendingSubjectDeletion) {
+        showToast('Ya hay una eliminación en curso. Espera unos segundos.', 'info');
+        return;
+    }
+    const currentUser = getCurrentUser();
+    if (!currentUser || currentUser.role !== ROLES.TUTOR || currentUser.id !== tutorId) {
+        showToast('Solo el propio tutor puede eliminar materias personalizadas.', 'error');
+        return;
+    }
+    const subject = findSubjectByName(subjectName);
+    if (!subject || subject.createdBy !== tutorId) {
+        showToast('Solo puedes eliminar materias creadas por ti.', 'error');
+        return;
+    }
+    const blocker = getCustomSubjectDeletionBlocker(tutorId, subjectName);
+    if (blocker) {
+        showToast(blocker, 'error');
+        return;
+    }
+    pendingSubjectDeletion = { tutorId, subjectName };
+    refreshSubjectViews();
+    showToast(`"${subjectName}" se eliminará en 5 segundos.`, 'info', {
+        actionLabel: 'Deshacer',
+        duration: 5000,
+        onAction: () => {
+            pendingSubjectDeletion = null;
+            refreshSubjectViews();
+            showToast('Eliminación cancelada.', 'success');
+        },
+        onExpire: () => finalizeCustomSubjectDeletion(tutorId, subjectName)
+    });
+}
+
+async function finalizeCustomSubjectDeletion(tutorId, subjectName) {
+    const deleted = await deleteCustomSubject(tutorId, subjectName);
+    pendingSubjectDeletion = null;
+    if (!deleted) refreshSubjectViews();
+}
+
+async function deleteCustomSubject(tutorId, subjectName) {
+    const currentUser = getCurrentUser();
+    if (!currentUser || currentUser.role !== ROLES.TUTOR || currentUser.id !== tutorId) {
+        showToast('Solo el propio tutor puede eliminar materias personalizadas.', 'error');
+        return false;
+    }
+    const subject = findSubjectByName(subjectName);
+    if (!subject || subject.createdBy !== tutorId) {
+        showToast('Solo puedes eliminar materias creadas por ti.', 'error');
+        return false;
+    }
+    if (!window.EduMatchBackend?.isEnabled?.() || !window.EduMatchBackend.deleteCustomSubject) {
+        showToast('No se puede eliminar la materia sin una conexión activa con Supabase.', 'error');
+        return false;
+    }
+    const result = await window.EduMatchBackend.deleteCustomSubject(tutorId, subjectName);
+    if (!result || result.ok === false) return false;
+
+    const subjects = getSubjects().filter(s => s.name.toLowerCase() !== subjectName.toLowerCase());
+    const users = getStoredData(STORAGE_KEYS.USERS, []);
+    const tutor = users.find(u => u.id === tutorId);
+    if (tutor) tutor.subjects = (tutor.subjects || []).filter(s => s.toLowerCase() !== subjectName.toLowerCase());
+    currentUser.subjects = (currentUser.subjects || []).filter(s => s.toLowerCase() !== subjectName.toLowerCase());
+    localStorage.setItem(STORAGE_KEYS.SUBJECTS, JSON.stringify(subjects));
+    localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
+    setCurrentUser(currentUser);
+    pendingSubjectDeletion = null;
+    showToast(`Materia personalizada "${subjectName}" eliminada.`, 'success');
+    refreshSubjectViews();
+    return true;
+}
+
+async function removeSubjectFromTutor(tutorId, subjectName) {
     const currentUser = getCurrentUser();
     if (!currentUser || currentUser.role !== ROLES.TUTOR || currentUser.id !== tutorId) {
         showToast('Solo el propio tutor puede gestionar sus materias.', 'error');
@@ -320,41 +466,63 @@ function removeSubjectFromTutor(tutorId, subjectName) {
         return;
     }
 
+    const previousUsers = getStoredData(STORAGE_KEYS.USERS, []);
     tutor.subjects = (tutor.subjects || []).filter(s => s !== subjectName);
-    saveData(STORAGE_KEYS.USERS, users);
+    localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
     setCurrentUser(tutor);
-    window.EduMatchBackend?.syncTutorSubjects(tutorId);
 
-    // El tutor ya quedó guardado sin esta materia, así que getEligibleReplacementTutors
-    // (que lee de storage) nunca vuelve a proponerlo a él mismo como reemplazo.
-    const ACTIVE = [REQUEST_STATUS.PENDING, REQUEST_STATUS.PROPOSED, REQUEST_STATUS.ACCEPTED];
+    if (window.EduMatchBackend?.isEnabled?.()) {
+        const result = await window.EduMatchBackend.removeTutorSubject(tutorId, subjectName);
+        if (result && result.ok === false) {
+            localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(previousUsers));
+            const previousUser = previousUsers.find(u => u.id === tutorId);
+            if (previousUser) setCurrentUser(previousUser);
+            renderTutors();
+            return;
+        }
+    }
+
+    const affectedIds = getStoredData(STORAGE_KEYS.REQUESTS, [])
+        .filter(r => r.tutorId === tutorId && r.subject === subjectName && ACTIVE_REQUEST_STATUSES.includes(r.status))
+        .map(r => r.id);
+    const remoteIdsByRequest = new Map();
+    try {
+        for (const id of affectedIds) remoteIdsByRequest.set(id, await fetchRemoteEligibleTutorIds(id));
+    } catch (error) {
+        // La materia ya se quitó del perfil, pero las solicitudes no se tocan sin la
+        // lista autorizada por Supabase (se muestra el error en lugar de adivinar).
+        showToast(error.userMessage || 'No se pudieron reasignar las solicitudes de esa materia. Inténtalo nuevamente.', 'error');
+        renderTutors();
+        renderRequests();
+        return;
+    }
+
     const requests = getStoredData(STORAGE_KEYS.REQUESTS, []);
     let requestsChanged = false;
     requests.forEach(r => {
-        if (r.tutorId !== tutorId || r.subject !== subjectName || !ACTIVE.includes(r.status)) return;
+        if (!affectedIds.includes(r.id) || r.tutorId !== tutorId || !ACTIVE_REQUEST_STATUSES.includes(r.status)) return;
         requestsChanged = true;
-        logRequestEvent(r, 'tutor_removed', { tutorName: r.tutorName, reasonKind: 'subject_removed' });
+        if (!Array.isArray(r.rejectedTutorIds)) r.rejectedTutorIds = [];
+        if (!r.rejectedTutorIds.includes(r.tutorId)) r.rejectedTutorIds.push(r.tutorId);
+        logRequestEvent(r, 'tutor_removed', { tutorId: r.tutorId, tutorName: r.tutorName, reasonKind: 'subject_removed' });
         r.proposedDate = null;
         r.proposedTime = null;
         r.proposedMessage = null;
-        r.tutorId = null; // deja de apuntar al tutor antes de buscar reemplazo
-        reassignOrCancel(r, 'tutor_removed');
+        r.tutorId = null;
+        reassignOrCancel(r, 'tutor_removed', remoteIdsByRequest.get(r.id));
     });
-    if (requestsChanged) saveData(STORAGE_KEYS.REQUESTS, requests);
+    if (requestsChanged) {
+        const synced = await saveData(STORAGE_KEYS.REQUESTS, requests);
+        if (!synced) return;
+    }
 
     showToast('Materia eliminada de tu perfil.', 'success');
     renderTutors();
-    // Si esta materia estaba asociada a alguna solicitud, ese vínculo tutor+materia
-    // deja de ser válido: refrescar Mis Solicitudes para reflejarlo de inmediato.
     renderRequests();
     updateStats();
 }
 
-/** Elimina el perfil de tutor y desvincula limpiamente sus solicitudes activas.
- * El tutor desaparece de la vista de inmediato; el borrado real (y el cierre
- * de sesión) solo se confirma en localStorage si no se pulsa "Deshacer" a
- * tiempo, en vez de bloquear con un window.confirm() nativo. */
-function deleteTutorProfile(tutorId) {
+async function deleteTutorProfile(tutorId) {
     const currentUser = getCurrentUser();
     if (!currentUser || currentUser.role !== ROLES.TUTOR || currentUser.id !== tutorId) {
         showToast('Solo el propio tutor puede eliminar su perfil.', 'error');
@@ -362,60 +530,72 @@ function deleteTutorProfile(tutorId) {
     }
     if (pendingTutorDeletion) return;
 
-    pendingTutorDeletion = { tutorId };
-    renderTutors();
+    let activeCount = getStoredData(STORAGE_KEYS.REQUESTS, []).filter(request =>
+        request && request.tutorId === tutorId && [REQUEST_STATUS.PENDING, REQUEST_STATUS.PROPOSED, REQUEST_STATUS.ACCEPTED].includes(request.status)
+    ).length;
 
-    showToast('Se eliminará tu perfil de tutor.', 'info', {
+    if (window.EduMatchBackend?.isEnabled?.() && window.EduMatchBackend.getTutorActiveRequestCount) {
+        const remoteCount = await window.EduMatchBackend.getTutorActiveRequestCount(tutorId);
+        if (remoteCount >= 0) activeCount = remoteCount;
+    }
+
+    if (activeCount > 0) {
+        showToast('No se puede eliminar en este momento: tienes tutorías a tu cargo.', 'error');
+        return;
+    }
+
+    openConfirmModal({
+        title: '¿Deseas eliminar tu perfil de tutor definitivamente?',
+        message: 'Se eliminará tu perfil de tutor, sus materias asignadas y el acceso a la cuenta. Después de confirmar tendrás 5 segundos para deshacer.',
+        confirmLabel: 'Sí, eliminar',
+        cancelLabel: 'No, conservar',
+        onConfirm: () => scheduleTutorDeletion(tutorId),
+        onCancel: () => showToast('No se eliminó el perfil.', 'info')
+    });
+}
+
+function scheduleTutorDeletion(tutorId) {
+    if (pendingTutorDeletion) return;
+    pendingTutorDeletion = { tutorId };
+    showToast('La eliminación de tu perfil se ejecutará en 5 segundos.', 'info', {
         actionLabel: 'Deshacer',
+        duration: 5000,
         onAction: () => {
             pendingTutorDeletion = null;
-            renderTutors();
             showToast('Eliminación cancelada.', 'success');
         },
         onExpire: () => finalizeTutorDeletion(tutorId)
     });
 }
 
-function finalizeTutorDeletion(tutorId) {
+async function finalizeTutorDeletion(tutorId) {
     pendingTutorDeletion = null;
+    const currentUser = getCurrentUser();
+    if (!currentUser || currentUser.id !== tutorId || currentUser.role !== ROLES.TUTOR) return;
 
-    const users = getStoredData(STORAGE_KEYS.USERS, []).filter(u => u.id !== tutorId);
-    saveData(STORAGE_KEYS.USERS, users);
-    if (window.EduMatchBackend?.isEnabled()) {
-        window.EduMatchBackend.deactivateProfile(tutorId).catch(error => console.error('No se pudo desactivar el perfil remoto:', error));
+    const activeCount = window.EduMatchBackend?.getTutorActiveRequestCount
+        ? await window.EduMatchBackend.getTutorActiveRequestCount(tutorId)
+        : getStoredData(STORAGE_KEYS.REQUESTS, []).filter(request =>
+            request && request.tutorId === tutorId && [REQUEST_STATUS.PENDING, REQUEST_STATUS.PROPOSED, REQUEST_STATUS.ACCEPTED].includes(request.status)
+        ).length;
+
+    if (activeCount > 0) {
+        showToast('No se puede eliminar en este momento: tienes tutorías a tu cargo.', 'error');
+        return;
     }
 
-    // Ninguna solicitud puede quedar apuntando a un tutor que ya no existe ni
-    // "abierta" sin tutor:
-    //   - activas (Pendiente / Propuesta / Aceptada): se reasignan solas a otro
-    //     tutor que dicte la materia (quedan Pendientes de su respuesta, y se
-    //     descarta cualquier horario ya propuesto) o se cancelan si no hay nadie;
-    //   - terminadas (Realizada / Cancelada / Rechazada): solo se desvincula el id.
-    // Los usuarios ya se guardaron sin este tutor, así que nunca se elige a él.
-    const ACTIVE = [REQUEST_STATUS.PENDING, REQUEST_STATUS.PROPOSED, REQUEST_STATUS.ACCEPTED];
-    const requests = getStoredData(STORAGE_KEYS.REQUESTS, []);
-    requests.forEach(r => {
-        if (r.tutorId !== tutorId) return;
-        if (ACTIVE.includes(r.status)) {
-            logRequestEvent(r, 'tutor_removed', { tutorName: r.tutorName, reasonKind: 'profile_deleted' });
-            r.proposedDate = null;
-            r.proposedTime = null;
-            r.proposedMessage = null;
-            r.tutorId = null; // deja de apuntar al tutor eliminado antes de buscar reemplazo
-            reassignOrCancel(r, 'tutor_removed');
-        } else {
-            r.tutorId = null;
-            r.tutorName = null;
-        }
-    });
-    saveData(STORAGE_KEYS.REQUESTS, requests);
-
-    // Solo cierra la sesión si quien sigue conectado es justamente ese tutor
-    // (pudo cerrar sesión o cambiar de cuenta durante el margen de "Deshacer").
-    const stillCurrent = getCurrentUser();
-    if (stillCurrent && stillCurrent.id === tutorId) {
-        setCurrentUser(null);
+    if (!window.EduMatchBackend?.isEnabled?.() || !window.EduMatchBackend.deleteTutorAccount) {
+        showToast('No se puede eliminar la cuenta sin conexión con Supabase.', 'error');
+        return;
     }
+
+    const result = await window.EduMatchBackend.deleteTutorAccount(tutorId);
+    if (!result || result.ok === false) return;
+
+    const users = getStoredData(STORAGE_KEYS.USERS, []).filter(user => user.id !== tutorId);
+    localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
+    localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
+    showToast('Tu cuenta de tutor fue eliminada correctamente.', 'success');
     refreshAfterAuthChange();
 }
 
@@ -426,8 +606,6 @@ function selectTutorForRequest(tutorName) {
     const currentSubject = subjectSelect ? subjectSelect.value : '';
     const tutor = getTutors().find(t => t.name === tutorName);
 
-    // Si ya había una materia elegida y ese tutor no la dicta, se bloquea la
-    // preselección en vez de aceptar una combinación tutor+materia inválida.
     if (currentSubject && tutor && !(tutor.subjects || []).includes(currentSubject)) {
         showToast('Este tutor no ofrece esta materia actualmente.', 'error');
         updateTutorSelectForSubject();
@@ -441,19 +619,12 @@ function selectTutorForRequest(tutorName) {
     }
 }
 
-// ---------- Solicitudes de tutoría ----------
-// APP-04: Solicitud de tutoría. También cubre la primera parte de APP-06
-// (Selección de fecha y hora para agendar): el estudiante indica fecha/hora
-// preferida al crear la solicitud.
 const ISO_DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_REGEX = /^\d{2}:\d{2}$/;
 
-function handleTutorRequest(event) {
+async function handleTutorRequest(event) {
     event.preventDefault();
 
-    // Capa de lógica: aunque el formulario esté oculto para quien no debe
-    // usarlo, esta validación es la que realmente impide crear la solicitud
-    // (por ejemplo, si alguien llama a handleTutorRequest() desde la consola).
     const currentUser = getCurrentUser();
     if (!currentUser || currentUser.role !== ROLES.STUDENT) {
         showToast('Debes iniciar sesión como estudiante para solicitar una tutoría.', 'error');
@@ -464,7 +635,6 @@ function handleTutorRequest(event) {
     const tutorName = document.getElementById('selectTutor').value;
     const preferredDate = document.getElementById('preferredDate').value;
     const preferredTime = document.getElementById('preferredTime').value;
-    // El tema es opcional; fecha y hora son obligatorias.
     const topic = document.getElementById('requestTopic').value.trim();
 
     if (!subject) {
@@ -475,7 +645,6 @@ function handleTutorRequest(event) {
         showToast('La materia seleccionada no existe en el catálogo.', 'error');
         return;
     }
-    // APP-06: fecha y hora son obligatorias (solo el "Tema específico" es opcional).
     if (!preferredDate) {
         showToast('Elige la fecha de la tutoría.', 'error');
         return;
@@ -508,9 +677,6 @@ function handleTutorRequest(event) {
     let tutor = null;
     let autoAssigned = false;
     if (!tutorName) {
-        // Sin preferencia: el sistema asigna el primer tutor que dicte la materia.
-        // Una solicitud nunca se crea "abierta" y sin tutor: si no hay ninguno
-        // disponible, no se crea (el estudiante lo ve al instante y puede elegir otra materia).
         tutor = getEligibleReplacementTutors({ subject, rejectedTutorIds: [], studentId: currentUser.id })[0] || null;
         if (!tutor) {
             showToast('Actualmente no hay tutores disponibles para esta materia.', 'error');
@@ -523,10 +689,6 @@ function handleTutorRequest(event) {
             showToast('El tutor seleccionado no existe.', 'error');
             return;
         }
-        // Relación válida obligatoria TUTOR + MATERIA: no basta con filtrar el
-        // select en la UI, esta es la comprobación real que impide guardar una
-        // solicitud inválida (por ejemplo, si se llama a esta función desde la
-        // consola saltándose el formulario).
         if (!(tutor.subjects || []).includes(subject)) {
             showToast('Este tutor no ofrece esta materia actualmente.', 'error');
             return;
@@ -535,7 +697,6 @@ function handleTutorRequest(event) {
 
     const requests = getStoredData(STORAGE_KEYS.REQUESTS, []);
 
-    // Evita duplicar una solicitud equivalente que ya está pendiente para el mismo estudiante.
     const isDuplicate = requests.some(r =>
         r.studentId === currentUser.id &&
         r.status === REQUEST_STATUS.PENDING &&
@@ -563,20 +724,12 @@ function handleTutorRequest(event) {
         proposedDate: null,
         proposedTime: null,
         proposedMessage: null,
-        // Tutores que rechazaron esta solicitud: nunca se vuelven a ofrecer en
-        // "Buscar otro tutor" para esta misma solicitud (ver rejectRequest).
         rejectedTutorIds: [],
-        // Origen del estado RECHAZADA: 'tutor' (el tutor rechazó la solicitud) o
-        // 'schedule' (el estudiante rechazó la propuesta de horario).
         rejectionSource: null,
         rejectedProposalDate: null,
         rejectedProposalTime: null,
-        // Motivo del estado CANCELADA cuando no fue una cancelación directa del
-        // estudiante (p. ej. 'no_tutors': no había más tutores para la materia).
         cancellationReason: null,
-        // Solo para la desvinculación por materia quitada (ver clearRequestTutor).
         openForReassignment: false,
-        // Bitácora de eventos que muestra el historial de cada tarjeta.
         history: autoAssigned
             ? [{ type: 'created', at: nowLocalTimestamp() }, { type: 'tutor_assigned', at: nowLocalTimestamp(), tutorId: tutor.id, tutorName: tutor.name }]
             : [{ type: 'created', at: nowLocalTimestamp() }],
@@ -584,7 +737,11 @@ function handleTutorRequest(event) {
         respondedAt: null,
         completedAt: null
     });
-    saveData(STORAGE_KEYS.REQUESTS, requests);
+    const synced = await saveData(STORAGE_KEYS.REQUESTS, requests);
+    if (!synced) {
+        renderRequests();
+        return;
+    }
 
     showToast(autoAssigned
         ? `Solicitud registrada y asignada automáticamente a ${tutor.name}.`
@@ -597,30 +754,13 @@ function handleTutorRequest(event) {
     switchTab('history');
 }
 
-// ---------- Flujo de estados de una solicitud ----------
-// Significado de cada estado (única fuente de verdad; nunca se retrocede a
-// PENDIENTE por cancelar un diálogo ni por rechazar una propuesta):
-//   Pendiente  -> espera la respuesta del tutor asignado (también el tutor que
-//                 el sistema asignó automáticamente tras el rechazo de otro).
-//   Propuesta  -> el tutor propuso otro horario; espera al estudiante.
-//   Aceptada   -> tutor/horario confirmados.
-//   Rechazada  -> SOLO cuando el estudiante rechazó el horario propuesto.
-//                 Decisión final: no se busca otro tutor.
-//   Cancelada  -> el proceso terminó sin poder continuar (el estudiante la
-//                 canceló, o un tutor la rechazó y no quedaban más tutores).
-//
-// El rechazo de un TUTOR nunca deja una solicitud abierta ni "Rechazada"
-// esperando una acción manual: reassignOrCancel() lo resuelve al instante,
-// reasignando al siguiente tutor disponible o cancelando la solicitud.
 const NO_MORE_TUTORS_MESSAGE = 'Lo sentimos, no hay más tutores que den esta materia disponibles en este momento.';
 
-/** Registra un evento en la bitácora de la solicitud (lo pinta el historial de la tarjeta). */
 function logRequestEvent(request, type, detail = {}) {
     if (!Array.isArray(request.history)) request.history = [];
     request.history.push({ type, at: nowLocalTimestamp(), ...detail });
 }
 
-/** Devuelve la solicitud y valida que el usuario activo sea quien puede actuar sobre ella. */
 function getRequestForAction(id, { as, errorMessage }) {
     const currentUser = getCurrentUser();
     const requests = getStoredData(STORAGE_KEYS.REQUESTS, []);
@@ -637,14 +777,12 @@ function getRequestForAction(id, { as, errorMessage }) {
     return { request, requests, currentUser };
 }
 
-function acceptRequest(id) {
+async function acceptRequest(id) {
     const ctx = getRequestForAction(id, { as: 'tutor', errorMessage: 'Solo el tutor asignado puede aceptar esta solicitud.' });
     if (!ctx) return;
     const { request, requests, currentUser } = ctx;
 
     if (request.status !== REQUEST_STATUS.PENDING) return;
-    // Si el tutor quitó esa materia de su perfil después de recibir la
-    // solicitud, la relación tutor+materia ya no es válida: se bloquea.
     if (!(currentUser.subjects || []).includes(request.subject)) {
         showToast('Ya no tienes esta materia asignada: no puedes aceptar esta solicitud.', 'error');
         return;
@@ -653,33 +791,63 @@ function acceptRequest(id) {
     request.status = REQUEST_STATUS.ACCEPTED;
     request.respondedAt = nowLocalTimestamp();
     logRequestEvent(request, 'accepted', { tutorName: request.tutorName });
-    saveData(STORAGE_KEYS.REQUESTS, requests);
+    const synced = await saveData(STORAGE_KEYS.REQUESTS, requests);
+    if (!synced) {
+        renderRequests();
+        return;
+    }
     showToast('Solicitud aceptada.', 'success');
     renderRequests();
 }
 
-/** El TUTOR rechaza la solicitud. Todo el flujo es automático y atómico:
- *   1) el tutor se excluye (rejectedTutorIds) y se registra el rechazo;
- *   2) reassignOrCancel() busca a otro tutor que dicte la materia;
- *   3) hay otro -> queda asignado a él; no hay -> la solicitud se cancela.
- * Todo se guarda en una sola escritura, así que una recarga nunca ve un estado
- * intermedio. Esta ruta NO se usa cuando el estudiante rechaza un horario. */
-function rejectRequest(id) {
-    const ctx = getRequestForAction(id, { as: 'tutor', errorMessage: 'Solo el tutor asignado puede rechazar esta solicitud.' });
-    if (!ctx) return;
-    const { request, requests } = ctx;
+const rejectionsInProgress = new Set();
 
-    if (request.status !== REQUEST_STATUS.PENDING) return;
+async function rejectRequest(id) {
+    if (rejectionsInProgress.has(id)) return;
+    rejectionsInProgress.add(id);
+    try {
+        await performRejection(id);
+    } finally {
+        rejectionsInProgress.delete(id);
+    }
+}
 
+async function performRejection(id) {
+    const precheck = getRequestForAction(id, { as: 'tutor', errorMessage: 'Solo el tutor asignado puede rechazar esta solicitud.' });
+    if (!precheck || precheck.request.status !== REQUEST_STATUS.PENDING) return;
+
+    // Con Supabase el rechazo y la reasignación los hace el servidor en una sola
+    // operación; el éxito solo se muestra si Supabase lo confirma.
+    const backend = window.EduMatchBackend;
+    if (backend?.isEnabled?.() && typeof backend.rejectRequest === 'function') {
+        const result = await backend.rejectRequest(id);
+        if (!result.ok) {
+            showToast(result.message, 'error');
+        } else {
+            showToast(result.reassigned
+                ? `Solicitud rechazada. Se reasignó automáticamente a ${result.tutorName}.`
+                : 'Solicitud rechazada. No había otros tutores disponibles: la solicitud se canceló.', 'success');
+        }
+        renderRequests();
+        updateStats();
+        return;
+    }
+
+    // Modo local (sin Supabase).
+    const { request, requests } = precheck;
     if (!Array.isArray(request.rejectedTutorIds)) request.rejectedTutorIds = [];
     if (request.tutorId != null && !request.rejectedTutorIds.includes(request.tutorId)) {
         request.rejectedTutorIds.push(request.tutorId);
     }
     request.respondedAt = nowLocalTimestamp();
-    logRequestEvent(request, 'tutor_rejected', { tutorName: request.tutorName });
+    logRequestEvent(request, 'tutor_rejected', { tutorId: request.tutorId, tutorName: request.tutorName });
 
     const newTutor = reassignOrCancel(request, 'rejected');
-    saveData(STORAGE_KEYS.REQUESTS, requests);
+    const synced = await saveData(STORAGE_KEYS.REQUESTS, requests);
+    if (!synced) {
+        renderRequests();
+        return;
+    }
 
     showToast(newTutor
         ? `Solicitud rechazada. Se reasignó automáticamente a ${newTutor.name}.`
@@ -688,15 +856,8 @@ function rejectRequest(id) {
     updateStats();
 }
 
-/** Resuelve una solicitud cuyo tutor dejó de estar disponible. Muta la solicitud
- * sin guardar (guarda quien la llama) y devuelve el tutor nuevo, o null:
- *   - Hay tutor elegible -> PENDIENTE con el tutor nuevo (debe responder él).
- *   - No hay ninguno     -> CANCELADA (cancellationReason 'no_tutors').
- * `reason` queda en la bitácora: 'rejected' (el tutor la rechazó; ya está en
- * rejectedTutorIds) o 'tutor_removed' (el tutor eliminó su perfil).
- * Nunca deja la solicitud abierta ni sin tutor. */
-function reassignOrCancel(request, reason) {
-    const next = getEligibleReplacementTutors(request)[0] || null;
+function reassignOrCancel(request, reason, remoteIds = null) {
+    const next = getReassignmentCandidates(request, remoteIds)[0] || null;
 
     if (next) {
         const fromTutorName = request.tutorName;
@@ -720,8 +881,6 @@ function reassignOrCancel(request, reason) {
     return null;
 }
 
-/** Estado, en memoria, de qué solicitudes tienen abierto el mini-formulario
- * de "Proponer otro horario" (no se persiste: es solo estado de UI). */
 const openProposalForms = new Set();
 
 function toggleProposalForm(id) {
@@ -733,11 +892,7 @@ function toggleProposalForm(id) {
     renderRequests();
 }
 
-/** APP-06 (Selección de fecha y hora para agendar): negociación de horario.
- * Tutor propone una nueva fecha/hora para una solicitud pendiente; el
- * estudiante la acepta (acceptProposedSchedule) o la rechaza
- * (rejectProposedSchedule) para dejar la tutoría agendada. */
-function proposeSchedule(id) {
+async function proposeSchedule(id) {
     const ctx = getRequestForAction(id, { as: 'tutor', errorMessage: 'Solo el tutor asignado puede proponer un horario.' });
     if (!ctx) return;
     const { request, requests, currentUser } = ctx;
@@ -774,16 +929,18 @@ function proposeSchedule(id) {
     request.proposedMessage = proposedMessage || null;
     request.respondedAt = nowLocalTimestamp();
     logRequestEvent(request, 'schedule_proposed', { tutorName: request.tutorName, date: proposedDate, time: proposedTime });
-    saveData(STORAGE_KEYS.REQUESTS, requests);
+    const synced = await saveData(STORAGE_KEYS.REQUESTS, requests);
+    if (!synced) {
+        renderRequests();
+        return;
+    }
 
     openProposalForms.delete(id);
     showToast('Propuesta de horario enviada al estudiante.', 'success');
     renderRequests();
 }
 
-/** El estudiante acepta el horario propuesto por el tutor: pasa a ACEPTADA
- * con la nueva fecha/hora como definitiva. */
-function acceptProposedSchedule(id) {
+async function acceptProposedSchedule(id) {
     const ctx = getRequestForAction(id, { as: 'student', errorMessage: 'Solo el estudiante que creó la solicitud puede responder a la propuesta.' });
     if (!ctx) return;
     const { request, requests } = ctx;
@@ -798,17 +955,17 @@ function acceptProposedSchedule(id) {
     request.proposedMessage = null;
     request.status = REQUEST_STATUS.ACCEPTED;
     request.respondedAt = nowLocalTimestamp();
-    saveData(STORAGE_KEYS.REQUESTS, requests);
+    const synced = await saveData(STORAGE_KEYS.REQUESTS, requests);
+    if (!synced) {
+        renderRequests();
+        return;
+    }
 
     showToast('Horario aceptado. La tutoría queda agendada.', 'success');
     renderRequests();
 }
 
-/** El ESTUDIANTE rechaza la propuesta de horario: la solicitud queda
- * RECHAZADA de forma definitiva (se conserva tras recargar). No reabre la
- * solicitud, no genera otra propuesta ni busca otro tutor automáticamente.
- * Se guarda qué horario se rechazó para mostrarlo en el historial. */
-function rejectProposedSchedule(id) {
+async function rejectProposedSchedule(id) {
     const ctx = getRequestForAction(id, { as: 'student', errorMessage: 'Solo el estudiante que creó la solicitud puede responder a la propuesta.' });
     if (!ctx) return;
     const { request, requests } = ctx;
@@ -824,14 +981,16 @@ function rejectProposedSchedule(id) {
     request.proposedTime = null;
     request.proposedMessage = null;
     request.respondedAt = nowLocalTimestamp();
-    saveData(STORAGE_KEYS.REQUESTS, requests);
+    const synced = await saveData(STORAGE_KEYS.REQUESTS, requests);
+    if (!synced) {
+        renderRequests();
+        return;
+    }
 
     showToast('Has rechazado la propuesta de horario. La solicitud quedó Rechazada.', 'info');
     renderRequests();
 }
 
-/** Tutores a los que el estudiante puede reasignar la solicitud: dictan la
- * materia, existen y NO están en rejectedTutorIds de esta solicitud. */
 function getEligibleReplacementTutors(request) {
     const excluded = request.rejectedTutorIds || [];
     return getTutors().filter(t =>
@@ -841,12 +1000,33 @@ function getEligibleReplacementTutors(request) {
     );
 }
 
-/** Quita el tutor de una solicitud cuando ya no ofrece la materia (por
- * ejemplo, el tutor la quitó de su perfil después de recibir la solicitud).
- * A diferencia de un rechazo, no es "culpa" de ese tutor, así que sí se
- * reinicia rejectedTutorIds. Deja la solicitud abierta para elegir un nuevo
- * tutor (aquí la solicitud SÍ debe seguir esperando respuesta: PENDIENTE). */
-function clearRequestTutor(id) {
+const ACTIVE_REQUEST_STATUSES = [REQUEST_STATUS.PENDING, REQUEST_STATUS.PROPOSED, REQUEST_STATUS.ACCEPTED];
+
+// Tutores a los que puede pasar automáticamente una solicitud rechazada.
+// remoteIds (calculado en Supabase) es la fuente autorizada cuando existe;
+// si no, se filtra con los datos locales.
+function getReassignmentCandidates(request, remoteIds = null) {
+    const tutors = getTutors().filter(t => t.id !== request.studentId && t.id !== request.tutorId);
+    if (Array.isArray(remoteIds)) {
+        return remoteIds.map(id => tutors.find(t => t.id === id)).filter(Boolean);
+    }
+    const requests = getStoredData(STORAGE_KEYS.REQUESTS, []);
+    const hasActiveDuplicate = tutorId => requests.some(r =>
+        r.id !== request.id &&
+        r.studentId === request.studentId &&
+        r.subject === request.subject &&
+        r.tutorId === tutorId &&
+        ACTIVE_REQUEST_STATUSES.includes(r.status)
+    );
+    return getEligibleReplacementTutors(request).filter(t => t.id !== request.tutorId && !hasActiveDuplicate(t.id));
+}
+
+async function fetchRemoteEligibleTutorIds(requestId) {
+    if (!window.EduMatchBackend?.isEnabled?.() || !window.EduMatchBackend.getEligibleTutorIds) return null;
+    return window.EduMatchBackend.getEligibleTutorIds(requestId);
+}
+
+async function clearRequestTutor(id) {
     const ctx = getRequestForAction(id, { as: 'student', errorMessage: 'Solo el estudiante que creó la solicitud puede modificarla.' });
     if (!ctx) return;
     const { request, requests } = ctx;
@@ -862,16 +1042,16 @@ function clearRequestTutor(id) {
     request.rejectionSource = null;
     request.openForReassignment = true;
     logRequestEvent(request, 'tutor_cleared');
-    saveData(STORAGE_KEYS.REQUESTS, requests);
+    const synced = await saveData(STORAGE_KEYS.REQUESTS, requests);
+    if (!synced) {
+        renderRequests();
+        return;
+    }
     showToast('Tutor quitado de la solicitud. Elige otro para continuar.', 'success');
     renderRequests();
 }
 
-/** Reasigna una solicitud SIN tutor (el tutor dejó de ofrecer la materia, ver
- * clearRequestTutor) a un tutor elegido por el estudiante. Queda PENDIENTE,
- * esperando la respuesta del tutor nuevo. No aplica al rechazo de un tutor:
- * ese caso lo resuelve reassignOrCancel() automáticamente. */
-function assignNewTutorToRequest(id, tutorId) {
+async function assignNewTutorToRequest(id, tutorId) {
     const ctx = getRequestForAction(id, { as: 'student', errorMessage: 'Solo el estudiante que creó la solicitud puede modificarla.' });
     if (!ctx) return;
     const { request, requests } = ctx;
@@ -881,7 +1061,6 @@ function assignNewTutorToRequest(id, tutorId) {
 
     const tutor = getEligibleReplacementTutors(request).find(t => t.id === tutorId);
     if (!tutor) {
-        // Distingue el motivo para dar un mensaje claro (y validar en lógica, no solo en la UI).
         const known = getTutors().find(t => t.id === tutorId);
         const message = known && (request.rejectedTutorIds || []).includes(known.id)
             ? 'Ese tutor ya rechazó esta solicitud.'
@@ -900,13 +1079,17 @@ function assignNewTutorToRequest(id, tutorId) {
     request.rejectedProposalTime = null;
     request.respondedAt = null;
     logRequestEvent(request, 'tutor_reassigned', { tutorId: tutor.id, tutorName: tutor.name, resultingStatus: request.status });
-    saveData(STORAGE_KEYS.REQUESTS, requests);
+    const synced = await saveData(STORAGE_KEYS.REQUESTS, requests);
+    if (!synced) {
+        renderRequests();
+        return;
+    }
 
     showToast(`Solicitud reasignada a ${tutor.name}.`, 'success');
     renderRequests();
 }
 
-function cancelRequest(id) {
+async function cancelRequest(id) {
     const ctx = getRequestForAction(id, { as: 'student', errorMessage: 'Solo el estudiante que creó la solicitud puede cancelarla.' });
     if (!ctx) return;
     const { request, requests } = ctx;
@@ -919,16 +1102,17 @@ function cancelRequest(id) {
     request.proposedTime = null;
     request.proposedMessage = null;
     logRequestEvent(request, 'cancelled');
-    saveData(STORAGE_KEYS.REQUESTS, requests);
+    const synced = await saveData(STORAGE_KEYS.REQUESTS, requests);
+    if (!synced) {
+        renderRequests();
+        return;
+    }
     showToast('Solicitud cancelada.', 'success');
     renderRequests();
     updateStats();
 }
 
-/** APP-07: Registro de tutoría realizada e historial. Solo el TUTOR asignado
- * puede marcar una tutoría como realizada, y solo cuando ya fue aceptada
- * El estudiante no puede marcar sus propias tutorías como realizadas. */
-function completeRequest(id) {
+async function completeRequest(id) {
     const currentUser = getCurrentUser();
     const requests = getStoredData(STORAGE_KEYS.REQUESTS, []);
     const request = requests.find(r => r.id === id);
@@ -946,14 +1130,17 @@ function completeRequest(id) {
     request.status = REQUEST_STATUS.DONE;
     request.completedAt = nowLocalTimestamp();
     logRequestEvent(request, 'completed');
-    saveData(STORAGE_KEYS.REQUESTS, requests);
+    const synced = await saveData(STORAGE_KEYS.REQUESTS, requests);
+    if (!synced) {
+        renderRequests();
+        return;
+    }
     showToast('Tutoría marcada como realizada.', 'success');
     renderRequests();
     updateStats();
 }
 
-// APP-08: Calificación de tutoría (estrellas 1-5 + comentario opcional).
-function saveRating(id, ratingValue) {
+async function saveRating(id, ratingValue) {
     const currentUser = getCurrentUser();
     const requests = getStoredData(STORAGE_KEYS.REQUESTS, []);
     const request = requests.find(r => r.id === id);
@@ -968,23 +1155,22 @@ function saveRating(id, ratingValue) {
     const commentInput = document.getElementById(`ratingComment-${id}`);
     request.rating = ratingValue;
     request.ratingComment = commentInput ? commentInput.value.trim() : '';
-    saveData(STORAGE_KEYS.REQUESTS, requests);
+    const synced = await saveData(STORAGE_KEYS.REQUESTS, requests);
+    if (!synced) {
+        renderRequests();
+        return;
+    }
 
     showToast('¡Gracias por tu valoración!', 'success');
     renderRequests();
 }
 
-// ---------- "Eliminar del historial" ----------
-// Estados que ya terminaron su ciclo: solo estas solicitudes pueden limpiarse
-// del historial. Las activas (Pendiente / Propuesta / Aceptada) nunca.
 const HISTORY_REMOVABLE_STATUSES = [REQUEST_STATUS.DONE, REQUEST_STATUS.REJECTED, REQUEST_STATUS.CANCELLED];
 
 function isHiddenFromHistory(request, userId) {
     return Array.isArray(request.hiddenFor) && request.hiddenFor.includes(userId);
 }
 
-/** ¿Puede este usuario quitar esta solicitud de SU historial? (Estudiante que la
- * creó o Tutor asignado, y solo si ya terminó: Completada, Rechazada o Cancelada.) */
 function canRemoveFromHistory(request, user) {
     if (!user || !HISTORY_REMOVABLE_STATUSES.includes(request.status)) return false;
     const isStudentOwner = user.id === request.studentId;
@@ -992,12 +1178,7 @@ function canRemoveFromHistory(request, user) {
     return isStudentOwner || isAssignedTutor;
 }
 
-/** "Eliminar del historial" (Completada, Rechazada o Cancelada; Estudiante o Tutor).
- * NUNCA borra la solicitud ni cambia su estado: solo agrega el id de quien pulsó
- * el botón a `hiddenFor`, así que sigue existiendo íntegra en el sistema y en la
- * vista de la otra parte. Se guarda al instante (una recarga inmediata no la
- * hace reaparecer); "Deshacer" quita ese mismo id de `hiddenFor`. */
-function deleteFromHistory(id) {
+async function deleteFromHistory(id) {
     const currentUser = getCurrentUser();
     const requests = getStoredData(STORAGE_KEYS.REQUESTS, []);
     const request = requests.find(r => r.id === id);
@@ -1018,7 +1199,11 @@ function deleteFromHistory(id) {
     if (isHiddenFromHistory(request, userId)) return;
     if (!Array.isArray(request.hiddenFor)) request.hiddenFor = [];
     request.hiddenFor.push(userId);
-    saveData(STORAGE_KEYS.REQUESTS, requests);
+    const synced = await saveData(STORAGE_KEYS.REQUESTS, requests);
+    if (!synced) {
+        renderRequests();
+        return;
+    }
     renderRequests();
 
     showToast('Solicitud eliminada de tu historial.', 'info', {
@@ -1027,17 +1212,20 @@ function deleteFromHistory(id) {
     });
 }
 
-function restoreToHistory(id, userId) {
+async function restoreToHistory(id, userId) {
     const requests = getStoredData(STORAGE_KEYS.REQUESTS, []);
     const request = requests.find(r => r.id === id);
     if (!request || !Array.isArray(request.hiddenFor)) return;
     request.hiddenFor = request.hiddenFor.filter(uid => uid !== userId);
-    saveData(STORAGE_KEYS.REQUESTS, requests);
+    const synced = await saveData(STORAGE_KEYS.REQUESTS, requests);
+    if (!synced) {
+        renderRequests();
+        return;
+    }
     renderRequests();
 }
 
-// ---------- Historial ----------
-function renderRequests() {
+function renderRequests(subjectFilter = '') {
     const requests = getStoredData(STORAGE_KEYS.REQUESTS, []);
     const container = document.getElementById('requestsList');
     const currentUser = getCurrentUser();
@@ -1051,13 +1239,10 @@ function renderRequests() {
         return;
     }
 
-    // Un estudiante ve sus propias solicitudes; un tutor ve aquellas donde fue elegido; sin sesión, no se muestra nada sensible.
-    // Una solicitud terminada "eliminada del historial" por este usuario
-    // (hiddenFor) deja de listarse SOLO para él: no afecta a la otra parte ni
-    // borra la solicitud.
     const visible = requests.filter(r => currentUser && (
         r.studentId === currentUser.id || (currentUser.role === ROLES.TUTOR && r.tutorId === currentUser.id)
-    ) && !isHiddenFromHistory(r, currentUser.id));
+    ) && !isHiddenFromHistory(r, currentUser.id)
+        && (!subjectFilter || (currentUser.role === ROLES.TUTOR && r.subject === subjectFilter)));
 
     if (!currentUser) {
         container.innerHTML = `<div class="card empty-state-card"><p class="empty-title">Inicia sesión para ver tus solicitudes</p></div>`;
@@ -1068,9 +1253,6 @@ function renderRequests() {
         return;
     }
 
-    // Ordenado por materia (alfabéticamente, sin distinguir mayúsculas/acentos)
-    // y, para solicitudes de la misma materia, por fecha/hora preferida y
-    // luego por fecha de creación, para que el orden sea estable y predecible.
     const sorted = visible.slice().sort((a, b) => {
         const bySubject = (a.subject || '').localeCompare(b.subject || '', 'es', { sensitivity: 'base' });
         if (bySubject !== 0) return bySubject;
@@ -1091,11 +1273,6 @@ const STATUS_BADGE_CLASS = {
     [REQUEST_STATUS.DONE]: 'badge-status-realizada'
 };
 
-/** Abre el historial de una solicitud en una ventana aparte, para que las
- * tarjetas conserven siempre el mismo tamaño y estructura.
- * Es una línea de tiempo, no una copia de la tarjeta: cada evento responde
- * "¿qué pasó, con quién, cuándo?". La estructura es la misma para estudiante y
- * tutor; solo cambia a quién se nombra en la cabecera (la otra parte). */
 function openHistoryModal(id) {
     const req = getStoredData(STORAGE_KEYS.REQUESTS, []).find(r => r.id === id);
     if (!req) return;
@@ -1110,8 +1287,6 @@ function openHistoryModal(id) {
     statusBadge.className = `badge ${STATUS_BADGE_CLASS[req.status] || ''}`;
     statusBadge.textContent = REQUEST_STATUS_LABEL[req.status] || req.status;
 
-    // El orden del arreglo ya es cronológico (cada evento se agrega al final);
-    // el sort estable solo protege datos heredados con marcas de tiempo sueltas.
     const events = getRequestHistory(req).map((ev, i) => ({ ev, i }))
         .sort((a, b) => (a.ev.at && b.ev.at && a.ev.at !== b.ev.at) ? a.ev.at.localeCompare(b.ev.at) : a.i - b.i)
         .map(x => x.ev);
@@ -1133,9 +1308,6 @@ function openHistoryModal(id) {
     openModal('historyModal');
 }
 
-/** Cada evento de la bitácora -> { title, detail, tone }. Un título corto y,
- * como mucho, una línea de detalle. Cada tipo tiene su propio texto para no
- * mezclar (tutor rechazó / estudiante rechazó horario / sin más tutores). */
 function describeHistoryEvent(ev) {
     const tutor = ev.tutorName || 'El tutor';
     const slot = ev.date ? `${formatStoredDate(ev.date)}${ev.time ? ' — ' + formatTime12(ev.time) : ''}` : '';
@@ -1161,8 +1333,6 @@ function describeHistoryEvent(ev) {
     }
 }
 
-/** Bitácora de la solicitud. Las solicitudes guardadas antes de existir la
- * bitácora se reconstruyen a partir de su estado actual. */
 function getRequestHistory(req) {
     if (Array.isArray(req.history) && req.history.length) return req.history;
     const legacy = [{ type: 'created', at: req.createdAt }];
@@ -1176,57 +1346,6 @@ function getRequestHistory(req) {
     return legacy;
 }
 
-/** Repara solicitudes que versiones anteriores dejaron guardadas tras el
- * rechazo de un tutor, cuando la búsqueda de reemplazo era manual:
- *   - RECHAZADA por el tutor (esperando el botón "Buscar otro tutor");
- *   - PENDIENTE sin tutor con el rechazo ya registrado ("Solicitud abierta").
- * Ninguna de las dos debe existir: se resuelven igual que un rechazo nuevo
- * (reasignar o cancelar). Es idempotente: tras resolverse ya no coinciden. */
-function normalizeStoredRequests() {
-    const requests = getStoredData(STORAGE_KEYS.REQUESTS, []);
-    const users = getStoredData(STORAGE_KEYS.USERS, []);
-    let changed = false;
-
-    requests.forEach(r => {
-        const legacyReopened = r.status === REQUEST_STATUS.PENDING && !r.tutorId && r.openForReassignment &&
-            r.rejectionSource && Array.isArray(r.rejectedTutorIds) && r.rejectedTutorIds.length > 0;
-        const legacyTutorRejected = r.status === REQUEST_STATUS.REJECTED && r.rejectionSource !== 'schedule';
-        // Pendiente sin tutor y sin selector manual: nació "sin preferencia" o su tutor
-        // eliminó el perfil. (El caso con openForReassignment es "tutor retirado": no se toca.)
-        const legacyUnassigned = r.status === REQUEST_STATUS.PENDING && !r.tutorId && !r.openForReassignment;
-        if (legacyUnassigned) {
-            r.history = getRequestHistory(r).slice();
-            const assigned = reassignOrCancel(r, 'auto');
-            if (assigned) r.history[r.history.length - 1] = { type: 'tutor_assigned', at: r.history[r.history.length - 1].at, tutorId: assigned.id, tutorName: assigned.name };
-            changed = true;
-            return;
-        }
-        if (!legacyReopened && !legacyTutorRejected) return;
-
-        // Se conserva la bitácora existente (o se reconstruye) antes de añadir el desenlace.
-        r.history = getRequestHistory(r).slice();
-        if (legacyReopened) {
-            const lastRejectedId = r.rejectedTutorIds[r.rejectedTutorIds.length - 1];
-            const lastTutor = users.find(u => u.id === lastRejectedId);
-            r.tutorId = lastRejectedId;
-            r.tutorName = lastTutor ? lastTutor.name : null;
-        }
-        if (!Array.isArray(r.rejectedTutorIds)) r.rejectedTutorIds = [];
-        if (r.tutorId != null && !r.rejectedTutorIds.includes(r.tutorId)) r.rejectedTutorIds.push(r.tutorId);
-        if (!r.history.some(ev => ev.type === 'tutor_rejected')) {
-            r.history.push({ type: 'tutor_rejected', at: r.respondedAt || r.createdAt, tutorName: r.tutorName });
-        }
-        // Un "tutor_reassigned" previo no aplica: el desenlace se recalcula desde cero.
-        reassignOrCancel(r, 'rejected');
-        changed = true;
-    });
-
-    if (changed) saveData(STORAGE_KEYS.REQUESTS, requests);
-}
-
-/** Si la solicitud está en manos de un tutor porque el sistema se la reasignó
- * (el anterior la rechazó o eliminó su perfil), devuelve ese evento de la
- * bitácora (con el tutor anterior y el motivo); si no, null. */
 function getAutoReassignment(req) {
     const events = getRequestHistory(req);
     const last = events[events.length - 1];
@@ -1234,8 +1353,6 @@ function getAutoReassignment(req) {
     return last.tutorId === req.tutorId ? last : null;
 }
 
-/** Mensaje de estado por defecto: la zona de información de la tarjeta
- * siempre muestra algo, así ninguna tarjeta queda con un hueco distinto. */
 function defaultStatusNote(req, isStudentOwner) {
     const tutor = escapeHtml(req.tutorName || 'el tutor');
     switch (req.status) {
@@ -1253,13 +1370,10 @@ function defaultStatusNote(req, isStudentOwner) {
     }
 }
 
-/** Botón de acción de tarjeta: todos comparten la misma estructura y el CSS
- * (.request-actions) les da el mismo alto, padding y tamaño. */
 function requestActionButton(kind, action, label, id) {
     return `<button type="button" class="btn-${kind}" data-action="${action}" data-id="${id}">${label}</button>`;
 }
 
-/** Bloque "elige un nuevo tutor" (select con los candidatos elegibles). */
 function renderTutorPicker(req, tutors) {
     return `
         <div class="request-panel">
@@ -1272,9 +1386,6 @@ function renderTutorPicker(req, tutors) {
         </div>`;
 }
 
-/** Fila de fechas del pie de la tarjeta: "Creada" a la izquierda y, si la
- * solicitud ya terminó, la fecha de cierre a la derecha (Realizada / Rechazada
- * / Cancelada). Siempre dd/mm/aaaa, en una sola línea, en el mismo orden. */
 function renderRequestDates(req) {
     const created = splitStoredTimestamp(req.createdAt).date;
     const closing = { [REQUEST_STATUS.DONE]: 'Realizada', [REQUEST_STATUS.REJECTED]: 'Rechazada', [REQUEST_STATUS.CANCELLED]: 'Cancelada' }[req.status];
@@ -1292,8 +1403,6 @@ function renderRequestCard(req, currentUser) {
     const isStudentOwner = currentUser.id === req.studentId;
     const isAssignedTutor = currentUser.role === ROLES.TUTOR && currentUser.id === req.tutorId;
 
-    // Si el tutor asignado ya no tiene esta materia en su perfil, la relación
-    // tutor+materia quedó inválida: se bloquean las acciones del tutor.
     let tutorSubjectMismatch = false;
     if (req.tutorId) {
         const tutorUser = getStoredData(STORAGE_KEYS.USERS, []).find(u => u.id === req.tutorId);
@@ -1304,16 +1413,11 @@ function renderRequestCard(req, currentUser) {
         ? `${formatStoredDate(req.preferredDate)}${req.preferredTime ? ' — ' + formatTime12(req.preferredTime) : ''}`
         : 'Por coordinar';
 
-    // Cada tarjeta se arma con las mismas tres piezas, sin importar el estado:
-    //   notices -> mensajes de estado / info adicional (van en el cuerpo)
-    //   panels  -> formularios y selectores (van en el cuerpo)
-    //   actions -> botones (siempre anclados al fondo de la tarjeta)
     const notices = [];
     const panels = [];
     const actions = [];
     const note = text => notices.push(`<p class="request-notice"><span>${text}</span></p>`);
 
-    // --- Tutor asignado ---
     if (req.status === REQUEST_STATUS.PENDING && req.tutorId && isAssignedTutor) {
         if (tutorSubjectMismatch) {
             note(`⚠️ Ya no tienes "${escapeHtml(req.subject)}" asignada. No puedes actuar sobre esta solicitud.`);
@@ -1348,7 +1452,6 @@ function renderRequestCard(req, currentUser) {
         actions.push(requestActionButton('secondary', 'complete-request', 'Marcar como realizada', req.id));
     }
 
-    // --- Propuesta de horario pendiente de respuesta del estudiante ---
     if (req.status === REQUEST_STATUS.PROPOSED) {
         const proposalInfo = `${formatStoredDate(req.proposedDate)} — ${formatTime12(req.proposedTime)}`;
         if (isStudentOwner) {
@@ -1364,10 +1467,6 @@ function renderRequestCard(req, currentUser) {
         }
     }
 
-    // --- Solicitud RECHAZADA ---
-    // Hoy solo la produce el estudiante al rechazar un horario propuesto. El
-    // rechazo de un TUTOR no llega aquí: se resuelve al instante (reasignada o
-    // cancelada), por lo que no se ofrece selección manual en este estado.
     if (req.status === REQUEST_STATUS.REJECTED) {
         const rejectedByTutor = req.rejectionSource !== 'schedule';
         const rejectedSlot = req.rejectedProposalDate
@@ -1385,7 +1484,6 @@ function renderRequestCard(req, currentUser) {
         }
     }
 
-    // --- Solicitud reasignada automáticamente tras el rechazo de otro tutor ---
     const reassignment = req.status === REQUEST_STATUS.PENDING ? getAutoReassignment(req) : null;
     if (reassignment) {
         const previous = escapeHtml(reassignment.fromTutorName || 'El tutor anterior');
@@ -1398,14 +1496,12 @@ function renderRequestCard(req, currentUser) {
         }
     }
 
-    // --- Solicitud CANCELADA porque no había más tutores ---
     if (req.status === REQUEST_STATUS.CANCELLED && req.cancellationReason === 'no_tutors') {
         note(isStudentOwner
             ? `<strong>Solicitud cancelada.</strong> ${NO_MORE_TUTORS_MESSAGE}`
             : 'Solicitud cancelada: la rechazaste y no había otros tutores disponibles para esta materia.');
     }
 
-    // --- Tutor quitado por dejar de ofrecer la materia: la solicitud sigue PENDIENTE ---
     if (req.status === REQUEST_STATUS.PENDING && !req.tutorId && req.openForReassignment && isStudentOwner) {
         const candidates = getEligibleReplacementTutors(req);
         if (candidates.length === 0) {
@@ -1420,17 +1516,13 @@ function renderRequestCard(req, currentUser) {
         actions.push(requestActionButton('secondary', 'clear-tutor', 'Elegir otro tutor', req.id));
     }
 
-    // --- Acciones generales del estudiante ---
     if ([REQUEST_STATUS.PENDING, REQUEST_STATUS.PROPOSED, REQUEST_STATUS.ACCEPTED].includes(req.status) && isStudentOwner) {
         actions.push(requestActionButton('danger', 'cancel-request', 'Cancelar', req.id));
     }
-    // Completada / Rechazada / Cancelada: "Eliminar del historial" para Estudiante
-    // Y Tutor (cada uno oculta solo su propia vista, ver deleteFromHistory).
     if (canRemoveFromHistory(req, currentUser)) {
         actions.push(requestActionButton('secondary', 'delete-history', 'Eliminar del historial', req.id));
     }
 
-    // --- Valoración ---
     if (req.status === REQUEST_STATUS.DONE && req.rating == null && isStudentOwner) {
         panels.push(`
             <div class="rating-box">
@@ -1448,7 +1540,6 @@ function renderRequestCard(req, currentUser) {
             </p>`);
     }
 
-    // Si no hay ningún aviso propio del estado, se muestra el resumen por defecto.
     if (!notices.length) {
         const text = defaultStatusNote(req, isStudentOwner);
         if (text) note(text);
@@ -1482,7 +1573,6 @@ function renderRequestCard(req, currentUser) {
         </div>`;
 }
 
-// ---------- Utilidades ----------
 function escapeHtml(str) {
     if (str == null) return '';
     const div = document.createElement('div');

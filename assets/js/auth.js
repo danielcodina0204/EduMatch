@@ -17,10 +17,18 @@ function validateRegistrationPassword(password) {
 }
 
 function translateAuthError(error, fallback) {
+    if (error?.userMessage) return error.userMessage;
     const message = String(error?.message || '').toLowerCase();
-    if (/already registered|user already exists|already been registered/.test(message)) return 'Ya existe una cuenta registrada con ese correo.';
-    if (/invalid login credentials|invalid credentials/.test(message)) return 'Correo o contraseña incorrectos.';
-    if (/email not confirmed/.test(message)) return 'Debes confirmar tu correo electrónico antes de iniciar sesión.';
+    const code = String(error?.code || '');
+    const status = Number(error?.status || 0);
+    if (code === 'user_already_exists' || code === 'email_exists' || /already registered|user already exists|already been registered/.test(message)) return 'Ya existe una cuenta registrada con ese correo.';
+    if (code === 'invalid_credentials' || /invalid login credentials|invalid credentials/.test(message)) return 'Correo o contraseña incorrectos.';
+    if (code === 'email_not_confirmed' || /email not confirmed/.test(message)) return 'Debes confirmar tu correo electrónico antes de iniciar sesión.';
+    if (code === 'user_banned' || /user is banned|banned/.test(message)) return 'Esta cuenta está deshabilitada. Contacta con el administrador.';
+    if (code === 'email_address_invalid' || code === 'validation_failed' || /unable to validate email|invalid format/.test(message)) return 'Ingresa un correo con formato válido.';
+    if (code === 'over_request_rate_limit' || status === 429) return 'Has realizado demasiados intentos. Espera unos minutos y vuelve a intentarlo.';
+    if (error?.name === 'AuthRetryableFetchError') return 'No se pudo conectar con Supabase. Comprueba tu conexión a Internet.';
+    if (status >= 500) return 'El servicio de autenticación no está disponible en este momento. Inténtalo más tarde.';
     if (/password.*(weak|requirements|at least|contain|characters)/.test(message)) return 'La contraseña no cumple los requisitos de seguridad.';
     if (/signups? not allowed|signup is disabled/.test(message)) return 'El registro de cuentas está deshabilitado en Supabase.';
     if (/rate limit|too many requests|too many attempts/.test(message)) return 'Has realizado demasiados intentos. Espera unos minutos y vuelve a intentarlo.';
@@ -83,15 +91,17 @@ async function handleRegistration(event) {
         users.push(newUser);
         saveData(STORAGE_KEYS.USERS, users);
 
-        if (role === ROLES.TUTOR && selectedSubjects.length) {
-            await window.EduMatchBackend.syncTutorSubjects(userId);
-        }
-
         if (result.session) {
-            setCurrentUser(newUser);
-            showToast(`Cuenta creada correctamente, ${newUser.name}.`, 'success');
+            let subjectsSaved = true;
+            if (role === ROLES.TUTOR && selectedSubjects.length) {
+                subjectsSaved = (await window.EduMatchBackend.syncTutorSubjects(userId)).ok !== false;
+            }
+            setCurrentUser(getStoredData(STORAGE_KEYS.USERS, []).find(u => u.id === userId) || newUser);
+            if (subjectsSaved) showToast(`Cuenta creada correctamente, ${newUser.name}.`, 'success');
         } else {
-            showToast('Cuenta creada. Revisa el correo de confirmación y luego inicia sesión.', 'success');
+            showToast(role === ROLES.TUTOR && selectedSubjects.length
+                ? 'Cuenta creada. Revisa el correo de confirmación, inicia sesión y agrega tus materias desde tu perfil.'
+                : 'Cuenta creada. Revisa el correo de confirmación y luego inicia sesión.', 'success');
         }
 
         document.getElementById('registerForm').reset();
@@ -129,15 +139,15 @@ async function handleLogin(event) {
         }
         await window.EduMatchBackend.signIn(email, password);
         const user = getCurrentUser();
-        if (!user) throw new Error('La autenticación fue correcta pero no se encontró el perfil.');
+        if (!user) throw Object.assign(new Error('Perfil no encontrado'), { userMessage: 'No existe ninguna cuenta con estos datos.' });
         showToast(`Sesión iniciada como ${user.name} (${user.role}).`, 'success');
         document.getElementById('loginForm').reset();
         resetPasswordVisibility('loginPassword');
         closeModal('authModal');
         refreshAfterAuthChange();
     } catch (error) {
-        console.error(error);
-        showToast(translateAuthError(error, 'Correo o contraseña incorrectos.'), 'error');
+        console.error('Login error:', error?.code || error?.message);
+        showToast(translateAuthError(error, 'No se pudo iniciar sesión. Inténtalo nuevamente.'), 'error');
     }
 }
 
