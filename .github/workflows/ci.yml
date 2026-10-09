@@ -1,0 +1,20 @@
+# Ejecuta las pruebas en cada Pull Request y en cada integración a main.
+# Las pruebas no usan .env: simulan Supabase o levantan PostgreSQL en proceso (PGlite).
+name: Pruebas
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  pruebas:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test

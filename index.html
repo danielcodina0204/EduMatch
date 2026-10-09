@@ -2,8 +2,6 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <!-- viewport-fit=cover: la app (Capacitor/Android) dibuja bajo la barra de estado y
-         la de gestos; el CSS respeta esas zonas con env(safe-area-inset-*). -->
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" id="metaThemeColor" content="#ffffff">
     <meta name="color-scheme" content="light dark">
@@ -16,11 +14,10 @@
 </head>
 <body>
 
-    <!-- Navegación Principal -->
     <header class="navbar">
         <div class="navbar-container">
             <div class="logo">EduMatch 🎓</div>
-            <!-- Web (>768px): enlaces arriba. Móvil / app (<=768px): barra de pestañas inferior. -->
+            
             <nav class="nav-links" aria-label="Secciones">
                 <button class="nav-btn active" data-tab="explore" onclick="switchTab('explore')"><span class="nav-ico" aria-hidden="true">📚</span><span class="nav-label">Materias</span></button>
                 <button class="nav-btn" data-tab="tutors" onclick="switchTab('tutors')"><span class="nav-ico" aria-hidden="true">👥</span><span class="nav-label">Tutores</span></button>
@@ -41,7 +38,7 @@
     </header>
 
     <main class="container">
-        <!-- Estadísticas rápidas -->
+        
         <section class="hero-stats-bar">
             <div class="stat-item">
                 <span id="statSubjects" class="stat-num">0</span>
@@ -57,7 +54,7 @@
             </div>
         </section>
 
-        <!-- APP-03: Consulta de Materias -->
+        
         <section id="explore-tab" class="tab-content active">
             <div class="section-header">
                 <h2>Materias Disponibles</h2>
@@ -66,7 +63,7 @@
             <div id="subjectsGrid" class="grid-cards"></div>
         </section>
 
-        <!-- APP-05: Consulta y gestión de Tutores -->
+        
         <section id="tutors-tab" class="tab-content">
             <div class="section-header">
                 <h2>Tutores Disponibles</h2>
@@ -74,11 +71,11 @@
             <div id="tutorsGrid" class="grid-cards"></div>
         </section>
 
-        <!-- APP-04: Solicitud de Tutoría (incluye APP-06: fecha/hora para agendar) -->
+        
         <section id="request-tab" class="tab-content">
             <h2>Solicitar Tutoría Académica</h2>
 
-            <!-- Se muestra cuando no hay sesión de estudiante activa (APP-04: control de acceso). -->
+            
             <div id="requestLocked" class="card empty-state-card" style="display:none;">
                 <p class="empty-title" id="requestLockedTitle">Inicia sesión como estudiante</p>
                 <p class="section-desc" id="requestLockedText">Para solicitar una tutoría académica necesitas iniciar sesión con una cuenta de estudiante.</p>
@@ -119,15 +116,13 @@
             </form>
         </section>
 
-        <!-- APP-07: Historial de solicitudes / tutorías realizadas. Cada tarjeta
-             incluye, cuando corresponde, el bloque de APP-08 (Calificación). -->
+        
         <section id="history-tab" class="tab-content">
             <h2>Mis Solicitudes</h2>
             <div id="requestsList" class="requests-list"></div>
         </section>
     </main>
 
-    <!-- Modal de Cuenta: Crear cuenta / Iniciar sesión -->
     <div id="authModal" class="modal">
         <div class="modal-content card">
             <button type="button" class="close-btn" aria-label="Cerrar" onclick="closeModal('authModal')">&times;</button>
@@ -137,7 +132,7 @@
                 <button type="button" id="authTabLogin" class="auth-tab" onclick="switchAuthMode('login')">Iniciar sesión</button>
             </div>
 
-            <!-- Crear cuenta -->
+            
             <form id="registerForm" novalidate>
                 <input type="hidden" id="userRole" value="Estudiante">
 
@@ -183,7 +178,7 @@
                 <button type="submit" class="btn-primary btn-block">Crear cuenta</button>
             </form>
 
-            <!-- Iniciar sesión -->
+            
             <form id="loginForm" style="display:none;">
                 <div class="form-group">
                     <label for="loginEmail">Correo electrónico</label>
@@ -201,8 +196,6 @@
         </div>
     </div>
 
-    <!-- Modal de Configuración: limpieza de datos de prueba (separado de las
-         funciones normales de estudiante/tutor). -->
     <div id="settingsModal" class="modal">
         <div class="modal-content card settings-modal-content">
             <button type="button" class="close-btn" aria-label="Cerrar" onclick="closeSettingsModal()">&times;</button>
@@ -231,8 +224,6 @@
         </div>
     </div>
 
-    <!-- Modal de confirmación reutilizable (rechazar solicitud / propuesta).
-         "Cancelar" solo cierra el diálogo; no cambia el estado de nada. -->
     <div id="confirmModal" class="modal" data-action="confirm-dismiss-backdrop">
         <div class="modal-content card confirm-modal-content" role="dialog" aria-modal="true" aria-labelledby="confirmModalTitle">
             <h3 id="confirmModalTitle"></h3>
@@ -244,7 +235,6 @@
         </div>
     </div>
 
-    <!-- Historial de una solicitud (se abre desde "Ver historial" en la tarjeta) -->
     <div id="historyModal" class="modal">
         <div class="modal-content card history-modal-content" role="dialog" aria-modal="true" aria-labelledby="historyModalTitle">
             <button type="button" class="close-btn" aria-label="Cerrar" onclick="closeModal('historyModal')">&times;</button>
@@ -262,11 +252,9 @@
 
     <div id="toastContainer" class="toast-container"></div>
 
-    <!-- Backend compartido: Supabase Auth + Postgres + Realtime -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="assets/js/backend-config.js"></script>
 
-    <!-- Módulos JS (orden: data -> backend -> auth -> app -> UI) -->
     <script src="assets/js/data.js"></script>
     <script src="assets/js/backend.js"></script>
     <script src="assets/js/auth.js"></script>

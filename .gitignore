@@ -26,3 +26,9 @@ Thumbs.db
 
 # Capturas temporales de pruebas
 tests/screenshot-*.png
+
+# Variables de entorno y configuración generada a partir de ellas (scripts/config.js)
+.env
+.env.*
+!.env.example
+assets/js/backend-config.js

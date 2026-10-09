@@ -1,6 +1,3 @@
--- EduMatch — esquema PostgreSQL para Supabase
--- La autenticación de contraseña vive en auth.users (Supabase Auth).
--- Las tablas públicas contienen exclusivamente datos de aplicación.
 
 create extension if not exists pgcrypto;
 
@@ -93,7 +90,6 @@ create index if not exists idx_solicitudes_tutor on public.solicitudes_tutoria(t
 create index if not exists idx_solicitudes_materia_estado on public.solicitudes_tutoria(materia_id, estado);
 create index if not exists idx_historial_solicitud on public.historial_solicitud(solicitud_id, fecha_evento);
 
--- Crea automáticamente el perfil de aplicación cuando Supabase Auth registra una cuenta.
 create or replace function public.crear_perfil_desde_auth()
 returns trigger
 language plpgsql
@@ -152,7 +148,6 @@ create trigger calificaciones_actualizado_en
 before update on public.calificaciones
 for each row execute procedure public.actualizar_timestamp_calificacion();
 
--- RLS
 alter table public.perfiles enable row level security;
 alter table public.materias enable row level security;
 alter table public.tutor_materias enable row level security;
@@ -179,6 +174,10 @@ for insert to authenticated with check (creada_por = auth.uid() or creada_por is
 drop policy if exists materias_update_creator on public.materias;
 create policy materias_update_creator on public.materias
 for update to authenticated using (creada_por = auth.uid()) with check (creada_por = auth.uid());
+
+drop policy if exists materias_delete_creator on public.materias;
+create policy materias_delete_creator on public.materias
+for delete to authenticated using (creada_por = auth.uid());
 
 drop policy if exists tutor_materias_select_public on public.tutor_materias;
 create policy tutor_materias_select_public on public.tutor_materias
@@ -279,10 +278,9 @@ drop policy if exists calificaciones_delete_estudiante on public.calificaciones;
 create policy calificaciones_delete_estudiante on public.calificaciones
 for delete to authenticated using (estudiante_id = auth.uid());
 
--- Permisos explícitos para la Data API.
 grant select on public.perfiles, public.materias, public.tutor_materias to anon, authenticated;
 grant update on public.perfiles to authenticated;
-grant insert, update on public.materias to authenticated;
+grant insert, update, delete on public.materias to authenticated;
 grant insert, delete on public.tutor_materias to authenticated;
 grant select, insert, update on public.solicitudes_tutoria to authenticated;
 grant select, insert, delete on public.historial_solicitud to authenticated;
@@ -324,7 +322,6 @@ begin
 exception when duplicate_object then null;
 end $$;
 
--- Catálogo oficial del MVP (APP-03).
 insert into public.materias (id, nombre, categoria, descripcion) values
 (1, 'Cálculo Diferencial', 'Matemáticas', 'Límites, derivadas, optimización y sus aplicaciones en ingeniería.'),
 (2, 'Programación Orientada a Objetos', 'Sistemas', 'Clases, objetos, herencia, polimorfismo y patrones de diseño.'),

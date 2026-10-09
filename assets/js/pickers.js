@@ -1,12 +1,3 @@
-// pickers.js — Controles propios que reemplazan a los nativos (feos y enormes en Android):
-//   · <select>            → lista desplegable pegada al campo (sin diálogo a pantalla completa)
-//   · <input type=date>   → calendario compacto
-//   · <input type=time>   → reloj compacto (horas y minutos en dos columnas)
-//
-// El <select>/<input> original NO se elimina: queda dentro del campo, invisible, y sigue
-// siendo la fuente de verdad (value, required, eventos input/change, formularios). Así toda
-// la lógica existente (app.js) funciona igual. Se aplica solo a los controles que ya existen y
-// a los que se crean después (tarjetas que se vuelven a dibujar) mediante un MutationObserver.
 (function () {
     'use strict';
 
@@ -21,7 +12,6 @@
     const WEEKDAYS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
     const pad = n => String(n).padStart(2, '0');
 
-    // ---------- utilidades ----------
     function el(tag, props = {}, html) {
         const node = document.createElement(tag);
         Object.entries(props).forEach(([k, v]) => { if (v === true) node.setAttribute(k, ''); else if (v !== false && v != null) node.setAttribute(k, v); });
@@ -34,7 +24,6 @@
     const parseIso = s => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s || ''); return m ? { y: +m[1], m: +m[2] - 1, d: +m[3] } : null; };
     const formatIso = s => { const p = parseIso(s); return p ? `${pad(p.d)}/${pad(p.m + 1)}/${p.y}` : ''; };
 
-    /** Un solo panel abierto a la vez. */
     let openPanel = null; // { close(), contains(node) }
     function closeOpenPanel() { if (openPanel) openPanel.close(false); }
 
@@ -46,9 +35,6 @@
     }, true);
     window.addEventListener('resize', () => { if (openPanel && !document.documentElement.classList.contains('kb-open')) openPanel.close(false); });
 
-    /** Coloca el panel justo debajo del campo (o encima si abajo no cabe) y, si hace
-     * falta, desplaza la página lo justo para que se vea completo sin taparse con la
-     * barra inferior. `constrain`: limita el alto del panel (listas con scroll interno). */
     function placePanel(field, trigger, panel, { constrain = false, maxHeight = 280 } = {}) {
         field.classList.remove('is-up');
         panel.style.maxHeight = '';
@@ -69,7 +55,6 @@
         else if (up && pr.top < topLimit + 6) window.scrollBy({ top: pr.top - topLimit - 10, behavior: 'smooth' });
     }
 
-    /** Envuelve el control nativo: queda invisible encima del botón y sigue en el DOM. */
     function wrapNative(native, kind) {
         const field = el('div', { class: `ui-field ui-field--${kind}` });
         native.parentNode.insertBefore(field, native);
@@ -81,7 +66,6 @@
         return field;
     }
 
-    /** Hace que un value asignado por código (input.value = …) también refresque el botón. */
     function watchValue(native, refresh, proto) {
         const desc = Object.getOwnPropertyDescriptor(proto, 'value');
         Object.defineProperty(native, 'value', {
@@ -118,12 +102,7 @@
     function makeTrigger(native, iconSvg) {
         const trigger = el('button', { type: 'button', class: 'ui-trigger', 'aria-haspopup': 'true', 'aria-expanded': 'false' });
         trigger.innerHTML = `${iconSvg ? `<span class="ui-trigger__icon">${iconSvg}</span>` : ''}<span class="ui-trigger__label"></span><span class="ui-trigger__chevron">${ICONS.chevron}</span>`;
-        // Por si algo enfoca el campo nativo (lector de pantalla, etc.): pasa el foco visible al botón.
         native.addEventListener('focus', () => trigger.focus({ preventScroll: true }));
-        // Su <label for="..."> (si existe) enfoca el <input> real por su cuenta al tocarlo, ANTES
-        // de que nuestro JS pueda intervenir. En Android eso basta para que el sistema abra su
-        // selector nativo por encima del nuestro. Se cancela esa acción por defecto y, en su lugar,
-        // se abre nuestro propio botón.
         if (native.id) {
             const label = document.querySelector(`label[for="${native.id}"]`);
             if (label) label.addEventListener('click', event => { event.preventDefault(); trigger.click(); });
@@ -131,7 +110,6 @@
         return trigger;
     }
 
-    // ---------- <select> → lista desplegable ----------
     function enhanceSelect(sel) {
         if (sel.multiple || sel.size > 1) return;
         const field = wrapNative(sel, 'select');
@@ -220,14 +198,6 @@
         refresh();
     }
 
-    /** Calendario y reloj: un único diálogo COMPARTIDO para cada tipo (uno para todos
-     * los campos de fecha, otro para todos los de hora), en vez de uno por campo.
-     * Se muestra centrado y fijo en la pantalla, con un fondo oscurecido detrás, así
-     * que su posición es siempre la misma sin importar dónde esté el campo ni cuánto
-     * haya hecho scroll la página. Se añade a <body> (no al campo) para que ninguna
-     * tarjeta con `overflow` lo recorte, y al ser compartido no queda ningún panel
-     * huérfano en el DOM cuando una tarjeta de solicitud se vuelve a dibujar (cada
-     * una puede traer su propio campo de fecha/hora para "Proponer otro horario"). */
     function createSharedDialog(panelClass, ariaLabel) {
         const backdrop = el('div', { class: 'ui-popover-backdrop', hidden: true });
         const panel = el('div', { class: `ui-menu ui-popover ${panelClass}`, role: 'dialog', 'aria-modal': 'true', 'aria-label': ariaLabel, hidden: true });
@@ -247,8 +217,6 @@
             if (focusTrigger && trigger) trigger.focus({ preventScroll: true });
         }
 
-        /** `fill()` llena `panel` con el contenido de ESTE campo justo antes de mostrarlo;
-         * `handleClick(event)` atiende los toques dentro del panel mientras esté activo. */
         function open(field, trigger, fill, handleClick) {
             closeOpenPanel();
             activeField = field;
@@ -271,7 +239,6 @@
     const calendarDialog = createSharedDialog('ui-cal', 'Elegir fecha');
     const timeDialog = createSharedDialog('ui-time', 'Elegir hora');
 
-    // ---------- <input type=date> → calendario compacto (diálogo compartido) ----------
     function enhanceDate(inp) {
         const field = wrapNative(inp, 'date');
         const trigger = makeTrigger(inp, ICONS.calendar);
@@ -338,9 +305,6 @@
         refresh();
     }
 
-    // ---------- <input type=time> → reloj compacto de 12 h con a. m. / p. m. (diálogo compartido) ----------
-    // Colombia usa formato 12 h (1:00 p. m., no 13:00); el <input type="time"> nativo
-    // solo admite guardar en 24 h, así que aquí se traduce en los dos sentidos.
     const HOURS12 = Array.from({ length: 12 }, (_, i) => pad(i + 1)); // 01..12
     const MINUTES5 = Array.from({ length: 12 }, (_, i) => pad(i * 5)); // 00,05,…,55
 
@@ -351,7 +315,6 @@
         const labelEl = trigger.querySelector('.ui-trigger__label');
         const caption = labelFor(inp);
 
-        /** "HH:MM" (24 h, guardado) -> { h12: "01".."12", period: "AM"|"PM", m } */
         function current() {
             const p = /^(\d{2}):(\d{2})$/.exec(inp.value || '');
             if (!p) return { h12: null, period: null, m: null };
@@ -360,7 +323,6 @@
             return { h12: pad(h12), period: h24 < 12 ? 'AM' : 'PM', m: p[2] };
         }
 
-        /** ("01".."12", "AM"|"PM", "MM") -> "HH:MM" (24 h) para guardar. */
         function to24(h12, period, m) {
             let h = Number(h12) % 12;
             if (period === 'PM') h += 12;
@@ -433,7 +395,6 @@
         refresh();
     }
 
-    // ---------- Aplicación automática ----------
     const SELECTOR = 'select:not([data-ui]), input[type="date"]:not([data-ui]), input[type="time"]:not([data-ui])';
 
     function enhance(node) {
