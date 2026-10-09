@@ -613,6 +613,37 @@ test('Botones de solicitud según rol: tutor asignado acepta/rechaza/propone; es
     for (const action of ['accept-request', 'reject-request', 'toggle-propose']) assert(!studentHtml.includes(`data-action="${action}"`));
 });
 
+// Tutoría ya aceptada de Ana con otro estudiante (por defecto, el mismo día y hora que pendingRequest()).
+const acceptedSameSlot = (extra = {}) => pendingRequest({ id: 1700000000001, studentId: 'student-2', studentName: 'Leo', status: 'Aceptada', ...extra });
+
+test('Horario ocupado: el tutor no puede aceptar una solicitud en una fecha y hora que ya tiene ocupada', async () => {
+    const { ctx, stored } = bootApp({ ...USERS[1] }, { [KEYS.SUBJECTS]: SUBJECTS, [KEYS.USERS]: USERS, [KEYS.REQUESTS]: [acceptedSameSlot(), pendingRequest()] });
+    await ctx.acceptRequest(1709876543210);
+    assert.strictEqual(stored(KEYS.REQUESTS)[1].status, 'Pendiente');
+    assert(/Horario no disponible/.test(ctx.toasts[0].message));
+    assert.strictEqual(ctx.toasts[0].type, 'error');
+});
+
+test('Horario ocupado: tampoco puede proponer ese horario, pero sí uno libre o aceptar si el otro es de otro tutor', async () => {
+    // Fecha lejana para que la validación de "fecha en el pasado" no interfiera con el paso del tiempo.
+    const busy = acceptedSameSlot({ preferredDate: '2030-10-10', preferredTime: '16:10' });
+    const { ctx, stored } = bootApp({ ...USERS[1] }, { [KEYS.SUBJECTS]: SUBJECTS, [KEYS.USERS]: USERS, [KEYS.REQUESTS]: [busy, pendingRequest()] });
+    ctx.document.getElementById('proposeDate-1709876543210').value = '2030-10-10';
+    ctx.document.getElementById('proposeTime-1709876543210').value = '16:10';
+    await ctx.proposeSchedule(1709876543210);
+    assert.strictEqual(stored(KEYS.REQUESTS)[1].status, 'Pendiente');
+    assert(/Horario no disponible/.test(ctx.toasts[0].message));
+
+    ctx.document.getElementById('proposeTime-1709876543210').value = '18:00';
+    await ctx.proposeSchedule(1709876543210);
+    assert.strictEqual(stored(KEYS.REQUESTS)[1].status, 'Propuesta_Horario');
+    assert.strictEqual(stored(KEYS.REQUESTS)[1].proposedTime, '18:00');
+
+    const otherTutor = bootApp({ ...USERS[1] }, { [KEYS.SUBJECTS]: SUBJECTS, [KEYS.USERS]: USERS, [KEYS.REQUESTS]: [{ ...acceptedSameSlot(), tutorId: 'tutor-b', tutorName: 'Beto' }, pendingRequest()] });
+    await otherTutor.ctx.acceptRequest(1709876543210);
+    assert.strictEqual(otherTutor.stored(KEYS.REQUESTS)[1].status, 'Aceptada');
+});
+
 test('Solicitar tutoría: solo estudiantes', async () => {
     const { ctx } = bootApp({ ...USERS[1] }, { [KEYS.SUBJECTS]: SUBJECTS, [KEYS.USERS]: USERS });
     await ctx.handleTutorRequest({ preventDefault() {} });

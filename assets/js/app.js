@@ -777,6 +777,22 @@ function getRequestForAction(id, { as, errorMessage }) {
     return { request, requests, currentUser };
 }
 
+// Horario que ya ocupa una solicitud del tutor: el de una tutoría aceptada o el
+// que propuso y aún espera respuesta del estudiante.
+function getTutorBusySlot(request) {
+    if (request.status === REQUEST_STATUS.ACCEPTED) return { date: request.preferredDate, time: request.preferredTime };
+    if (request.status === REQUEST_STATUS.PROPOSED) return { date: request.proposedDate, time: request.proposedTime };
+    return null;
+}
+
+function isTutorScheduleTaken(requests, tutorId, date, time, exceptId) {
+    return requests.some(r => {
+        if (r.id === exceptId || r.tutorId !== tutorId) return false;
+        const slot = getTutorBusySlot(r);
+        return !!slot && slot.date === date && slot.time === time;
+    });
+}
+
 async function acceptRequest(id) {
     const ctx = getRequestForAction(id, { as: 'tutor', errorMessage: 'Solo el tutor asignado puede aceptar esta solicitud.' });
     if (!ctx) return;
@@ -785,6 +801,10 @@ async function acceptRequest(id) {
     if (request.status !== REQUEST_STATUS.PENDING) return;
     if (!(currentUser.subjects || []).includes(request.subject)) {
         showToast('Ya no tienes esta materia asignada: no puedes aceptar esta solicitud.', 'error');
+        return;
+    }
+    if (isTutorScheduleTaken(requests, currentUser.id, request.preferredDate, request.preferredTime, request.id)) {
+        showToast('Horario no disponible: ya tienes una tutoría en esa fecha y hora. Propón otro horario al estudiante.', 'error');
         return;
     }
 
@@ -920,6 +940,10 @@ async function proposeSchedule(id) {
     }
     if (!proposedTime || !TIME_REGEX.test(proposedTime)) {
         showToast('Indica una hora válida para la propuesta.', 'error');
+        return;
+    }
+    if (isTutorScheduleTaken(requests, currentUser.id, proposedDate, proposedTime, request.id)) {
+        showToast('Horario no disponible: ya tienes una tutoría en esa fecha y hora. Elige otro horario.', 'error');
         return;
     }
 
