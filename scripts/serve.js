@@ -1,12 +1,13 @@
-// Servidor estático mínimo para probar la versión web en http://localhost:8080
-// (puerto configurable con PORT). Solo publica index.html y assets/, igual que
-// build-web.js, para no exponer .env, tests/ ni el resto del repositorio.
+// Servidor estático mínimo para probar la versión web en http://localhost:3000
+// (el site_url de supabase/config.toml; puerto configurable con PORT). Solo
+// publica index.html y assets/, igual que build-web.js, para no exponer .env,
+// tests/ ni el resto del repositorio.
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
 const root = path.join(__dirname, '..');
-const port = Number(process.env.PORT) || 8080;
+const port = Number(process.env.PORT) || 3000;
 const MIME = {
     '.html': 'text/html; charset=utf-8',
     '.js': 'text/javascript; charset=utf-8',
