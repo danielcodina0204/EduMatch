@@ -809,7 +809,7 @@ test('TEST 11 — Tutor B recibe la solicitud y puede aceptarla, proponer horari
     assert.strictEqual(remoteRow(accept).estado, 'aceptada');
 
     const propose = await bootFull(a.db, 'tutor-b');
-    propose.ctx.document.getElementById(`proposeDate-${REQ_ID}`).value = '2026-10-25';
+    propose.ctx.document.getElementById(`proposeDate-${REQ_ID}`).value = '2030-10-25';
     propose.ctx.document.getElementById(`proposeTime-${REQ_ID}`).value = '11:00';
     await propose.ctx.proposeSchedule(REQ_ID);
     assert.strictEqual(errorToasts(propose).length, 0);
