@@ -112,9 +112,6 @@ npm run android:debug   # genera android/app/build/outputs/apk/debug/app-debug.a
 npm run android:open    # abre el proyecto en Android Studio
 ```
 
-`build:web` falla a propósito si falta `.env`, para no generar un APK sin conexión
-a Supabase.
-
 ## Pruebas
 
 ```bash
@@ -135,18 +132,6 @@ Terminado: ver [CONTRIBUTING.md](CONTRIBUTING.md).
 
 | Plataforma | Enlace |
 |---|---|
-| Tablero Kanban (Trello) | _pendiente: pegar enlace con acceso de lectura_ |
-| Canal del equipo | _pendiente: pegar invitación_ |
-| Videoconferencia (enlace fijo de ceremonias) | _pendiente_ |
-| Carpeta en la nube (Google Drive) | _pendiente: pegar enlace con permiso de comentario_ |
+| Tablero Kanban (Trello): https://trello.com/invite/b/6aac378251ad63893bba9824/ATTIc12d8016ee839e1c458347b7a0008f357ACF1FD0/edumatch-conecta-aprende-y-avanza
+| Videoconferencia (Whatsapp)
 | Repositorio | <https://github.com/danielcodina0204/EduMatch> |
-
-## Herramientas de IA utilizadas
-
-La guía del curso permite asistentes de IA como apoyo, siempre que el equipo
-entienda y pueda explicar cada línea, y pide declararlos aquí.
-
-| Herramienta | Para qué se usó |
-|---|---|
-| Claude Code (Anthropic) | Verificación del proyecto frente a la guía del entregable (9 de octubre de 2026): integración de la versión final v8 al repositorio, configuración por `.env`, servidor local (`npm start`), validación de horario ocupado con sus pruebas (APP-06), flujo de CI, plantilla de PR, este README, `CONTRIBUTING.md` y borradores de la documentación del proyecto. |
-| _pendiente: completar el equipo_ | _Indicar cualquier otra herramienta usada (por ejemplo, para el mockup de la interfaz o el código) y para qué._ |
