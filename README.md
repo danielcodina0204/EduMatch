@@ -14,7 +14,7 @@ Universidad Cooperativa de Colombia · 2026-2 · Docente: Sabina Rada.
 | Rol | Integrante |
 |---|---|
 | Product Owner | Shaadon Carolina Jiménez Florez |
-| Scrum Master (también desarrolla) | Daniel De Jesus Codina Ortiz |
+| Scrum Master | Daniel De Jesus Codina Ortiz |
 | Equipo de Desarrollo | Juan Camilo Hernandez Panneflek |
 
 ## Funcionalidades (historias APP-XX)
