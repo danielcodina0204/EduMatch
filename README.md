@@ -132,6 +132,5 @@ Terminado: ver [CONTRIBUTING.md](CONTRIBUTING.md).
 
 | Plataforma | Enlace |
 |---|---|
-| Tablero Kanban (Trello): https://trello.com/invite/b/6aac378251ad63893bba9824/ATTIc12d8016ee839e1c458347b7a0008f357ACF1FD0/edumatch-conecta-aprende-y-avanza
-| Videoconferencia (Whatsapp)
-| Repositorio | <https://github.com/danielcodina0204/EduMatch> |
+| Tablero Kanban (Trello) | [EduMatch - Conecta, aprende y avanza](https://trello.com/invite/b/6aac378251ad63893bba9824/ATTIc12d8016ee839e1c458347b7a0008f357ACF1FD0/edumatch-conecta-aprende-y-avanza) |
+| Repositorio de código (GitHub) | [EduMatch](https://github.com/danielcodina0204/EduMatch) |
