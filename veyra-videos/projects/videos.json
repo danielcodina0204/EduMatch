@@ -1,0 +1,53 @@
+{
+  "v1": {
+    "slug": "01-presentacion",
+    "title": "Presentación de VEYRA SOLUCIONES",
+    "dur": 20,
+    "poster": 11.5,
+    "scenes": [
+      4.6,
+      4.4,
+      7.4,
+      3.6
+    ]
+  },
+  "v2": {
+    "slug": "02-business-mri",
+    "title": "Business MRI y Diagnóstico inicial",
+    "dur": 20,
+    "poster": 8.8,
+    "scenes": [
+      3.4,
+      4.4,
+      5.2,
+      3.4,
+      3.6
+    ]
+  },
+  "v3": {
+    "slug": "03-servicios",
+    "title": "Servicios",
+    "dur": 20,
+    "poster": 9.5,
+    "scenes": [
+      3.2,
+      4.4,
+      5.2,
+      3.6,
+      3.6
+    ]
+  },
+  "v4": {
+    "slug": "04-sectores",
+    "title": "Sectores",
+    "dur": 20,
+    "poster": 5.5,
+    "scenes": [
+      3,
+      4.6,
+      4.6,
+      4.2,
+      3.6
+    ]
+  }
+}

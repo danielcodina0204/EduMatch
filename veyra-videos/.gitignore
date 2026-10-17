@@ -1,0 +1,4 @@
+projects/*/.hyperframes/
+projects/*/renders/
+entregables/*/work-*/
+node_modules/

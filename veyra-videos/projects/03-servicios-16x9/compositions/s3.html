@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="es"><body>
+<template id="s3-template">
+<style>
+@font-face{font-family:Outfit;font-weight:600;src:url(assets/fonts/outfit-latin-600-normal.woff2) format("woff2")}
+@font-face{font-family:Outfit;font-weight:700;src:url(assets/fonts/outfit-latin-700-normal.woff2) format("woff2")}
+@font-face{font-family:Inter;font-weight:400;src:url(assets/fonts/inter-latin-400-normal.woff2) format("woff2")}
+@font-face{font-family:Inter;font-weight:500;src:url(assets/fonts/inter-latin-500-normal.woff2) format("woff2")}
+@font-face{font-family:Inter;font-weight:600;src:url(assets/fonts/inter-latin-600-normal.woff2) format("woff2")}
+#root{--navy:#080f2e;--blue:#0561ef;--blue-d:#004bd0;--gray:#343c51;--line:#dce8f2;--soft:#f3f8fc;--white:#ffffff;--px:140px;--st:84px;--sb:90px;--h1:124px;--h2:78px;--body:44px;--lab:30px;--src:28px;--gap:44px;--cp:36px 40px;--cn:60px;--r:26px;
+ position:absolute;inset:0;overflow:hidden;font-family:Inter,sans-serif;background:var(--soft);color:var(--navy)}
+#root *{margin:0;padding:0;box-sizing:border-box}
+.in{position:absolute;inset:0;padding:var(--st) var(--px) var(--sb);display:flex;flex-direction:column;z-index:2}
+.hdr{display:flex;align-items:center;gap:28px;flex:none}
+.wmw{display:flex;flex-direction:column;gap:2px}
+.wm{font:700 46px/1 Outfit,sans-serif;letter-spacing:.34em}
+.ws{font:600 24px/1 Outfit,sans-serif;letter-spacing:.42em}
+.rule{display:block;flex:1;height:4px;border-radius:2px;background:currentColor;transform-origin:left center}
+.main{flex:1;display:flex;flex-direction:column;justify-content:center;gap:var(--gap);min-height:0}
+.foot{flex:none;font:500 var(--src) Inter,sans-serif;min-height:34px;color:var(--gray)}
+h1{font:700 var(--h1)/1.04 Outfit,sans-serif;letter-spacing:-.02em}
+h2{font:700 var(--h2)/1.06 Outfit,sans-serif;letter-spacing:-.015em}
+.body{font:500 var(--body)/1.3 Inter,sans-serif;color:var(--gray)}
+.acc{color:var(--blue)}
+.split{display:flex;gap:56px;align-items:center}
+.split>.t{flex:1}.split>.v{flex:1.25}
+.gridbg{position:absolute;inset:0;z-index:0;background-image:linear-gradient(var(--line) 2px,transparent 2px),linear-gradient(90deg,var(--line) 2px,transparent 2px);background-size:120px 120px;opacity:0.55}
+.glow{position:absolute;width:1100px;height:1100px;right:-380px;top:-300px;border-radius:50%;background:radial-gradient(circle,rgba(5,97,239,.5) 0,rgba(5,97,239,0) 66%);z-index:1}
+.chip{display:block;width:fit-content;font:600 var(--body)/1.2 Outfit,sans-serif;padding:20px 34px;border-radius:var(--r);border:3px solid var(--navy);color:var(--navy);background:var(--white)}
+.list{display:flex;flex-direction:row;flex-wrap:wrap;gap:20px}
+.grid{display:grid;gap:22px;grid-template-columns:repeat(var(--lcols,3),1fr)}
+.card{position:relative;background:var(--white);border:3px solid var(--line);border-radius:var(--r);padding:var(--cp);overflow:hidden}
+.card .n{font:700 var(--cn)/1 Outfit,sans-serif;color:var(--blue)}
+.card .tx{font:600 var(--body)/1.2 Inter,sans-serif;color:var(--navy)}
+.card .sub{font:500 calc(var(--body) - 6px)/1.3 Inter,sans-serif;color:var(--gray);margin-top:10px}
+.card .bar{display:block;height:12px;border-radius:6px;background:var(--line);margin-top:18px;overflow:hidden}
+.card .bar i{display:block;height:100%;width:100%;border-radius:6px;background:var(--blue);transform-origin:left center}
+.btn{display:block;width:fit-content;background:var(--blue);color:var(--white);font:700 calc(var(--body) + 8px) Outfit,sans-serif;padding:28px 56px;border-radius:var(--r);border-bottom:10px solid var(--blue-d)}
+.btn2{display:block;width:fit-content;font:600 calc(var(--body) - 2px) Outfit,sans-serif;padding:20px 40px;border-radius:var(--r);border:3px solid var(--line);color:var(--white)}
+.contact .v{font:700 var(--h2) Outfit,sans-serif}
+.contact .w{font:600 calc(var(--body) + 2px) Inter,sans-serif;margin-top:8px;color:var(--line)}
+.tag{display:block;width:fit-content;font:600 var(--lab) Inter,sans-serif;letter-spacing:.06em;padding:10px 22px;border-radius:999px;background:var(--blue);color:var(--white)}
+.flow{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.flow .nd{font:600 var(--lab) Inter,sans-serif;padding:14px 26px;border-radius:999px;border:3px solid var(--blue);color:var(--navy);background:var(--white)}
+.flow .ar{font:700 var(--lab) Outfit,sans-serif;color:var(--blue)}
+svg text{font-family:Inter,sans-serif}
+</style>
+<div id="root" data-composition-id="s3" data-start="0" data-duration="5.20" data-width="1920" data-height="1080"><div class="gridbg"></div><div class="in"><div class="hdr"><div class="wmw"><span class="wm">VEYRA</span><span class="ws">SOLUCIONES</span></div><i class="rule"></i></div><div class="main"><span class="tag e">Servicio 2</span><h1 class="e">Transformación digital</h1><p class="body e" style="font-size:calc(var(--body) + 6px)">Implementamos:</p><div class="list"><span class="chip e">Páginas web</span><span class="chip e">Automatizaciones</span><span class="chip e">Software a medida</span></div></div><div class="foot"></div></div></div>
+<script>
+const tl = gsap.timeline({ paused: true });
+tl.fromTo("#s3 .rule",{scaleX:0},{scaleX:1,duration:.5,ease:"power2.out"},0.05);
+tl.fromTo("#s3 .tag",{opacity:0,y:8},{opacity:1,y:0,duration:.26,ease:"power2.out",stagger:0.035},0.10);
+tl.fromTo("#s3 h1",{opacity:0,y:8},{opacity:1,y:0,duration:.26,ease:"power2.out",stagger:0.035},0.10);
+tl.fromTo("#s3 .body",{opacity:0,y:8},{opacity:1,y:0,duration:.26,ease:"power2.out",stagger:0.035},0.40);
+tl.fromTo("#s3 .chip",{opacity:0,y:8},{opacity:1,y:0,duration:.26,ease:"power2.out",stagger:0.5},0.90);
+window.__timelines["s3"] = tl;
+</script>
+</template>
+</body></html>
